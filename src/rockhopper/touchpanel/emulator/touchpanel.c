@@ -73,7 +73,7 @@ typedef struct  {
 
 
 event_list_t touchpanel_event_list;
-int touchpanel_event_fd;
+int touchpanel_event_fd = -1;
 
 static void touch_item_reset(nyx_touchpanel_event_item_t *t) {
 	t->finger = 0;
@@ -101,7 +101,7 @@ static nyx_event_touchpanel_t* touch_event_create()
 	return event_ptr;
 }
 
-static nyx_error_t touchpanel_release_event(nyx_device_t* d, nyx_event_t* e)
+nyx_error_t touchpanel_release_event(nyx_device_t* d, nyx_event_t* e)
 {
 	if (NULL == d) {
 		return NYX_ERROR_INVALID_HANDLE;
@@ -131,6 +131,7 @@ static nyx_touchpanel_event_item_t* touch_event_get_next_item(
 
 	return item_ptr;
 }
+
 static nyx_touchpanel_event_item_t* touch_event_get_current_item(
 	nyx_event_touchpanel_t* i_event_ptr)
 {
@@ -163,22 +164,54 @@ static general_settings_t sGeneralSettings =
 	.fingerDownThreshold = 0
 };
 
+static float scaleX, scaleY;
+
+/* Using hardcoded values for now ,since ioctl FBIOGET_VSCREENINFO 
+   on /dev/fb0 is returning invalid values in qemux86 */
+
+#define SCREEN_HORIZONTAL_RES	1024
+#define SCREEN_VERTICAL_RES	768
+
 static int
 init_touchpanel(void)
 {
-    	touchpanel_event_fd = open("/dev/input/touchscreen0", O_RDWR);
+	struct input_absinfo abs;
+	int  maxX, maxY, ret = -1;
+    	
+	touchpanel_event_fd = open("/dev/input/touchscreen0", O_RDWR);
 	if(touchpanel_event_fd < 0) {
-		nyx_error("Error in opening touchpanel event file");
+		nyx_error("Error in opening touchpanel event device");
 		return -1;
 	}
 
+	ret = ioctl(touchpanel_event_fd, EVIOCGABS(0), &abs);
+	if(ret < 0) {
+		nyx_error("Error in fetching screen horizontal limits");
+		goto error;
+	}
+	maxX = abs.maximum;
+
+	ret = ioctl(touchpanel_event_fd, EVIOCGABS(1), &abs);
+	if(ret < 0) {
+		nyx_error("Error in fetching screen vertical limits");
+		goto error;
+	}
+	maxY = abs.maximum;
+
     	init_gesture_state_machine(&sGeneralSettings, 1);
 
-    	return 0;
+	scaleX = (float)SCREEN_HORIZONTAL_RES / (float)maxX;
+	scaleY = (float)SCREEN_VERTICAL_RES / (float)maxY;
+
+	return 0;
+error:
+	if(touchpanel_event_fd >= 0)
+		close(touchpanel_event_fd);
+	return ret;
 }
 
 
-static nyx_error_t nyx_module_open(nyx_instance_t i, nyx_device_t** d)
+nyx_error_t nyx_module_open(nyx_instance_t i, nyx_device_t** d)
 {
 
 	touchpanel_device_t* touchpanel_device = (touchpanel_device_t *) calloc(
@@ -191,7 +224,6 @@ static nyx_error_t nyx_module_open(nyx_instance_t i, nyx_device_t** d)
 
 	int ret = nyx_module_register_method(i, (nyx_device_t*) touchpanel_device,
 			NYX_GET_EVENT_SOURCE_MODULE_METHOD, "touchpanel_get_event_source");
-
 
 	nyx_module_register_method(i, (nyx_device_t*) touchpanel_device,
 		NYX_GET_EVENT_MODULE_METHOD, "touchpanel_get_event");
@@ -223,7 +255,7 @@ fail_unlock_settings:
 	return NYX_ERROR_GENERIC;
 }
 
-static nyx_error_t nyx_module_close(nyx_device_t *d) {
+nyx_error_t nyx_module_close(nyx_device_t *d) {
 
 	touchpanel_device_t* touchpanel_device = (touchpanel_device_t*) d;
 
@@ -236,10 +268,17 @@ static nyx_error_t nyx_module_close(nyx_device_t *d) {
 
         deinit_gesture_state_machine();
 	free(d);
+ 	
+	if(touchpanel_event_fd >= 0) {
+                close(touchpanel_event_fd);
+		touchpanel_event_fd = -1;
+	}
+
+
 	return NYX_ERROR_NONE;
 }
 
-static nyx_error_t touchpanel_get_event_source(nyx_device_t* d, int* f) {
+nyx_error_t touchpanel_get_event_source(nyx_device_t* d, int* f) {
 
 	if (NULL == d)
 		return NYX_ERROR_INVALID_HANDLE;
@@ -252,7 +291,7 @@ static nyx_error_t touchpanel_get_event_source(nyx_device_t* d, int* f) {
 	return NYX_ERROR_NONE;
 }
 
-static nyx_error_t touchpanel_set_operating_mode(nyx_device_t* d, nyx_operating_mode_t m)
+nyx_error_t touchpanel_set_operating_mode(nyx_device_t* d, nyx_operating_mode_t m)
 {
 	return NYX_ERROR_NOT_IMPLEMENTED;
 }
@@ -300,15 +339,16 @@ generate_mouse_gesture(int touchButtonState)
 #define SYN_START       8
 
 
-void handle_new_event(input_event_t *event)
+static void handle_new_event(input_event_t *event)
 {
 	static int touchButtonState = 0;
 
+	// Truncate scaled X & Y coordinate values
 	if ((event->type == EV_ABS) && (event->code == ABS_X))
-			cachedX = event->value;
+			cachedX = (int) (event->value * scaleX);
 	
 	else if ((event->type == EV_ABS) && (event->code == ABS_Y))
-			cachedY = event->value;
+			cachedY = (int) (event->value * scaleY);
 	
 	else if ((event->type == EV_KEY) && (event->code == BTN_TOUCH))
 	{	
@@ -380,9 +420,7 @@ read_input_event(void)
     	return numEvents;
 }
 
-#define MAX_EVENTS      64
-
-static nyx_error_t touchpanel_get_event(nyx_device_t* d, nyx_event_t** e)
+nyx_error_t touchpanel_get_event(nyx_device_t* d, nyx_event_t** e)
 {
 	int event_count = 0;
 	int event_iter = 0;
@@ -491,32 +529,32 @@ static nyx_error_t touchpanel_get_event(nyx_device_t* d, nyx_event_t** e)
     return NYX_ERROR_NONE;
 }
 
-static nyx_error_t touchpanel_set_active_scan_rate(nyx_device_t* d, unsigned int r)
+nyx_error_t touchpanel_set_active_scan_rate(nyx_device_t* d, unsigned int r)
 {
 	return NYX_ERROR_NOT_IMPLEMENTED;
 }
 
-static nyx_error_t touchpanel_set_idle_scan_rate(nyx_device_t* d, unsigned int r)
+nyx_error_t touchpanel_set_idle_scan_rate(nyx_device_t* d, unsigned int r)
 {
 	return NYX_ERROR_NOT_IMPLEMENTED;
 }
 
-static nyx_error_t touchpanel_get_active_scan_rate(nyx_device_t* d, unsigned int* r)
+nyx_error_t touchpanel_get_active_scan_rate(nyx_device_t* d, unsigned int* r)
 {
 	return NYX_ERROR_NOT_IMPLEMENTED;
 }
 
-static nyx_error_t touchpanel_get_idle_scan_rate(nyx_device_t* d, unsigned int* r)
+nyx_error_t touchpanel_get_idle_scan_rate(nyx_device_t* d, unsigned int* r)
 {
 	return NYX_ERROR_NOT_IMPLEMENTED;
 }
 
-static nyx_error_t touchpanel_set_mode(nyx_device_t* d, int m)
+nyx_error_t touchpanel_set_mode(nyx_device_t* d, int m)
 {
 	return NYX_ERROR_NOT_IMPLEMENTED;
 }
 
-static nyx_error_t touchpanel_get_mode(nyx_device_t* d, int *m)
+nyx_error_t touchpanel_get_mode(nyx_device_t* d, int *m)
 {
 	return NYX_ERROR_NOT_IMPLEMENTED;
 }
