@@ -17,5 +17,5 @@
 # LICENSE@@@
 
 if(${WEBOS_TARGET_MACHINE_IMPL} STREQUAL emulator)
-	nyx_create_module(KeysMain emulator/keys.c)
+	nyx_create_module(KeysMain keys_common.c emulator/keys.c)
 endif()
