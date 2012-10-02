@@ -26,6 +26,14 @@ pkg_check_modules(GLIB2 REQUIRED glib-2.0)
 include_directories(${GLIB2_INCLUDE_DIRS})
 webos_add_compiler_flags(ALL ${GLIB2_CFLAGS_OTHER})
 
+pkg_check_modules(GIO REQUIRED gio-2.0)
+include_directories(${GIO_INCLUDE_DIRS})
+webos_add_compiler_flags(ALL ${GIO_CFLAGS_OTHER})
+
+pkg_check_modules(UDEV REQUIRED libudev)
+include_directories(${UDEV_INCLUDE_DIRS})
+webos_add_compiler_flags(ALL ${UDEV_CFLAGS_OTHER})
+
 pkg_check_modules(NYXLIB REQUIRED nyx)
 include_directories(${NYXLIB_INCLUDE_DIRS})
 webos_add_compiler_flags(ALL ${NYXLIB_CFLAGS_OTHER})
@@ -69,7 +77,7 @@ endif()
 
 macro(nyx_create_module module)
 	add_library(${module} MODULE ${ARGN})
-	target_link_libraries(${module} ${GLIB2_LDFLAGS} ${NYXLIB_LDFLAGS} -lrt -lpthread)
+	target_link_libraries(${module} ${GLIB2_LDFLAGS} ${GIO_LDFLAGS} ${UDEV_LDFLAGS} ${NYXLIB_LDFLAGS} -lrt -lpthread)
 	install(TARGETS ${module} DESTINATION ${NYX_MODULE_DIR})
 endmacro()
 

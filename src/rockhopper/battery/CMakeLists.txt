@@ -18,5 +18,9 @@
 
 include_directories(.)
 
-nyx_create_module(BatteryMain fileutils.c batterylib.c emulator/fake_battery.c)
-install(FILES emulator/fake_battery_values.sh DESTINATION "/usr/sbin")
+if(${WEBOS_TARGET_MACHINE_IMPL} STREQUAL emulator)
+    nyx_create_module(BatteryMain fileutils.c batterylib.c emulator/fake_battery.c)
+    install(FILES emulator/fake_battery_values.sh DESTINATION "/usr/sbin")
+elseif(${WEBOS_TARGET_MACHINE_IMPL} STREQUAL device)
+    nyx_create_module(BatteryMain fileutils.c batterylib.c device/battery.c)
+endif()
