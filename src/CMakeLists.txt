@@ -32,17 +32,33 @@ webos_add_compiler_flags(ALL ${NYXLIB_CFLAGS_OTHER})
 
 webos_add_linker_options(ALL --no-undefined --as-needed)
 webos_add_compiler_flags(ALL -Wall -g -std=c99)
+webos_add_compiler_flags(ALL -D_GNU_SOURCE=1)
 webos_add_compiler_flags(DEBUG -O0 -DDEBUG -D_DEBUG)
 webos_add_compiler_flags(RELEASE -DNDEBUG)
 
-add_definitions(-D_GNU_SOURCE=1)
-add_definitions(-DNYX_MODULE_PREFIX=\"${CMAKE_SHARED_MODULE_PREFIX}\")
-add_definitions(-DNYX_MODULE_SUFFIX=\"${CMAKE_SHARED_MODULE_SUFFIX}\")
-add_definitions(-DNYX_MODULE_DIR=\"${NYX_MODULE_DIR}\")
-add_definitions(-DNYX_MODULE_MOCK_DIR=\"${NYX_MODULE_MOCK_DIR}\")
+execute_process(COMMAND ${PKG_CONFIG_EXECUTABLE} --variable=nyx_module_dir nyx
+		OUTPUT_VARIABLE nyx_module_dirpath
+		RESULT_VARIABLE pkgconfig_failed)
 
-# Get the target-specific configuration (if any).
-include(${CMAKE_CURRENT_SOURCE_DIR}/target/${WEBOS_TARGET_CORE_OS}/CMakeLists.txt OPTIONAL RESULT_VARIABLE TARGET_CONFIG)
+if(NOT pkgconfig_failed)
+	STRING(REGEX REPLACE "(/?\r?\n)+$" "" nyx_module_dirpath "${nyx_module_dirpath}")
+	set(NYX_MODULE_DIR ${nyx_module_dirpath} CACHE PATH "Nyx modules directory path")
+else()
+	message(FATAL_ERROR "Error in fetching 'nyx_module_dir' from nyx.pc, execute_process() returned ${pkgconfig_failed}")
+endif()
+
+# Uncomment the following lines if mock modules are required
+
+#execute_process(COMMAND ${PKG_CONFIG_EXECUTABLE} --variable=nyx_module_mock_dir nyx
+#		OUTPUT_VARIABLE nyx_module_mock_dirpath
+#		RESULT_VARIABLE pkgconfig_failed)
+#
+#if(NOT pkgconfig_failed)
+#	STRING(REGEX REPLACE "(/?\r?\n)+$" "" nyx_module_mock_dirpath "${nyx_module_mock_dirpath}")
+#	set(NYX_MODULE_MOCK_DIR ${nyx_module_mock_dirpath} CACHE PATH "Nyx mock modules directory path")
+#else()
+#	message(FATAL_ERROR "Error in fetching 'nyx_module_mock_dir' from nyx.pc, execute_process() returned ${pkgconfig_failed}")
+#endif()
 
 macro(nyx_create_module module)
 	add_library(${module} MODULE ${ARGN})
