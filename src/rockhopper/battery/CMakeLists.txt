@@ -18,6 +18,5 @@
 
 include_directories(.)
 
-nyx_create_module(BatteryMain batterylib.c emulator/fake_battery.c)
+nyx_create_module(BatteryMain fileutils.c batterylib.c emulator/fake_battery.c)
 install(FILES emulator/fake_battery_values.sh DESTINATION "/usr/sbin")
-
