@@ -16,22 +16,6 @@
 #
 # LICENSE@@@
 
+include_directories(.)
 
-if(MODULE_SYSTEM_WEBOS_LINUX)
-    add_subdirectory(system)
-    add_subdirectory(battery)
-    add_subdirectory(charger)
-endif()
-
-if(MODULE_TOUCHPANEL_WEBOS_LINUX)
-    add_subdirectory(touchpanel)
-endif()
-
-if(MODULE_KEYS_WEBOS_LINUX)
-    add_subdirectory(keys)
-endif()
-
-if(MODULE_LED_CONTROLLER_WEBOS_LINUX)
-    add_subdirectory(led_controller)
-endif()
-
+nyx_create_module(MicroControllerLEDsDefault led_controller.c)
