@@ -36,29 +36,36 @@ webos_add_compiler_flags(ALL -D_GNU_SOURCE=1)
 webos_add_compiler_flags(DEBUG -O0 -DDEBUG -D_DEBUG)
 webos_add_compiler_flags(RELEASE -DNDEBUG)
 
-execute_process(COMMAND ${PKG_CONFIG_EXECUTABLE} --variable=nyx_module_dir nyx
-		OUTPUT_VARIABLE nyx_module_dirpath
-		RESULT_VARIABLE pkgconfig_failed)
+function(nyx_get_pkgconfig_var varname nyx_pkgconfig_var usecache)
+	execute_process(COMMAND ${PKG_CONFIG_EXECUTABLE} --variable=${nyx_pkgconfig_var} nyx
+	                OUTPUT_VARIABLE pkgconfig_output
+	                RESULT_VARIABLE pkgconfig_failed)
 
-if(NOT pkgconfig_failed)
-	STRING(REGEX REPLACE "(/?\r?\n)+$" "" nyx_module_dirpath "${nyx_module_dirpath}")
-	set(NYX_MODULE_DIR ${nyx_module_dirpath} CACHE PATH "Nyx modules directory path")
-else()
-	message(FATAL_ERROR "Error in fetching 'nyx_module_dir' from nyx.pc, execute_process() returned ${pkgconfig_failed}")
+	if(NOT pkgconfig_failed)
+		STRING(REGEX REPLACE "(/?\r?\n)+$" "" pkgconfig_output "${pkgconfig_output}")
+		if(usecache)
+			set(${varname} ${pkgconfig_output} CACHE PATH ${nyx_pkgconfig_var})
+		else()
+			set(${varname} ${pkgconfig_output} PARENT_SCOPE)
+		endif()
+	else()
+		message(FATAL_ERROR "Error in fetching '${nyx_pkgconfig_var}' from nyx.pc, execute_process() returned ${pkgconfig_failed}")
+	endif()
+endfunction()
+
+nyx_get_pkgconfig_var(NYX_MODULE_DIR nyx_module_dir TRUE)
+nyx_get_pkgconfig_var(NYX_MODULE_PREFIX nyx_module_prefix FALSE)
+nyx_get_pkgconfig_var(NYX_MODULE_SUFFIX nyx_module_suffix FALSE)
+# Uncomment the following line if mock modules are required
+#nyx_get_pkgconfig_var(NYX_MODULE_MOCK_DIR nyx_module_mock_dir TRUE)
+
+if(NOT (NYX_MODULE_PREFIX STREQUAL ""))
+	set (CMAKE_SHARED_MODULE_PREFIX ${NYX_MODULE_PREFIX})
 endif()
 
-# Uncomment the following lines if mock modules are required
-
-#execute_process(COMMAND ${PKG_CONFIG_EXECUTABLE} --variable=nyx_module_mock_dir nyx
-#		OUTPUT_VARIABLE nyx_module_mock_dirpath
-#		RESULT_VARIABLE pkgconfig_failed)
-#
-#if(NOT pkgconfig_failed)
-#	STRING(REGEX REPLACE "(/?\r?\n)+$" "" nyx_module_mock_dirpath "${nyx_module_mock_dirpath}")
-#	set(NYX_MODULE_MOCK_DIR ${nyx_module_mock_dirpath} CACHE PATH "Nyx mock modules directory path")
-#else()
-#	message(FATAL_ERROR "Error in fetching 'nyx_module_mock_dir' from nyx.pc, execute_process() returned ${pkgconfig_failed}")
-#endif()
+if(NOT (NYX_MODULE_SUFFIX STREQUAL ""))
+	set (CMAKE_SHARED_MODULE_SUFFIX ${NYX_MODULE_SUFFIX})
+endif()
 
 macro(nyx_create_module module)
 	add_library(${module} MODULE ${ARGN})
