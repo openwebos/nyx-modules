@@ -16,6 +16,7 @@
 #
 # LICENSE@@@
 
-if(${WEBOS_TARGET_MACHINE_IMPL} STREQUAL emulator)
+
+if(${WEBOS_TARGET_MACHINE_IMPL} STREQUAL emulator OR ${WEBOS_TARGET_MACHINE_IMPL} STREQUAL device)
 	nyx_create_module(TouchpanelMain evdev/touchpanel_common.c evdev/touchpanel_gestures.c evdev/touchpanel.c)
 endif()
