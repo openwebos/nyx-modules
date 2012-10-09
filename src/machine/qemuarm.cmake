@@ -24,4 +24,5 @@ set(MODULE_KEYS_WEBOS_LINUX			YES)
 set(MODULE_TOUCHPANEL_WEBOS_LINUX		YES)
 
 add_definitions(-DKEYPAD_INPUT_DEVICE=\"/dev/input/event0\")
-
+add_definitions(-DSCREEN_HORIZONTAL_RES=1024)
+add_definitions(-DSCREEN_VERTICAL_RES=768)
