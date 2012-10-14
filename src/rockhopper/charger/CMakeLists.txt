@@ -16,5 +16,7 @@
 #
 # LICENSE@@@
 
-nyx_create_module(ChargerMain emulator/chargerlib.c)
+if(${WEBOS_TARGET_MACHINE_IMPL} STREQUAL emulator)
+    nyx_create_module(ChargerMain chargerlib.c emulator/charger.c)
+endif()
 
