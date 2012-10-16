@@ -17,10 +17,11 @@ How to Build on Linux
 
 Below are the tools and libraries (and their minimum versions) required to build nyx-modules:
 
-* cmake 2.6
+* cmake (version required by openwebos/cmake-modules-webos)
 * gcc 4.6.3
 * glib-2.0 2.32.1
 * make (any version)
+* openwebos/cmake-modules-webos 1.0.0 RC4
 * openwebos/nyx-lib 2.0.0 RC2
 * pkg-config 0.26
 

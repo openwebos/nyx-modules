@@ -16,5 +16,8 @@
 #
 # LICENSE@@@
 
-add_subdirectory(display)
-add_subdirectory(device_info)
+if(${WEBOS_TARGET_MACHINE_IMPL} STREQUAL emulator)
+	webos_configure_source_files(SOURCE_FILES emulator/device_info_generic.c)
+	nyx_create_module(DeviceInfoMain ${SOURCE_FILES})
+	target_link_libraries(DeviceInfoMain ${LIBCRYPTO_LDFLAGS})
+endif()
