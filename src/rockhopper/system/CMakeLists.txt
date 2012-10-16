@@ -18,5 +18,5 @@
 
 include_directories(.)
 
-nyx_create_module(SystemMain emulator/system.c rtc.c)
+nyx_create_module(SystemMain system.c rtc.c)
 
