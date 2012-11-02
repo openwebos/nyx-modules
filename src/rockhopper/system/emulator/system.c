@@ -202,7 +202,7 @@ nyx_error_t system_shutdown(nyx_device_handle_t handle , nyx_system_shutdown_typ
 }
 
 
-nyx_error_t system_reboot(nyx_device_handle_t handle , nyx_system_shutdown_type_t type)
+nyx_error_t system_reboot(nyx_device_handle_t handle , nyx_system_shutdown_type_t type, const char *reason)
 {
 	if (handle != nyxDev) {
 		return NYX_ERROR_INVALID_HANDLE;
