@@ -245,8 +245,6 @@ static nyx_error_t copy_line(const char* src, char* dest, size_t dest_len)
 
 nyx_error_t device_info_get_info (nyx_device_handle_t d, nyx_device_info_type_t type, char* dest, size_t dest_len)
 {
-	nyx_error_t error;
-
 	if(NULL == d) {
 		return NYX_ERROR_INVALID_HANDLE;
 	}
@@ -262,20 +260,11 @@ nyx_error_t device_info_get_info (nyx_device_handle_t d, nyx_device_info_type_t 
 		case NYX_DEVICE_INFO_BATT_RSP:
 		case NYX_DEVICE_INFO_BOARD_TYPE:
 		case NYX_DEVICE_INFO_BT_ADDR:
-		case NYX_DEVICE_INFO_CARRIER:
-		case NYX_DEVICE_INFO_DM_CL_AUTH_NAME:
-		case NYX_DEVICE_INFO_DM_CL_AUTH_PW:
-		case NYX_DEVICE_INFO_DM_CL_NONCE:
-		case NYX_DEVICE_INFO_DM_SETS:
-		case NYX_DEVICE_INFO_DM_SVR_AUTH_PW:
-		case NYX_DEVICE_INFO_DM_SVR_NONCE:
 		case NYX_DEVICE_INFO_HARDWARE_REVISION:
 		case NYX_DEVICE_INFO_INSTALLER:
 		case NYX_DEVICE_INFO_KEYBOARD_TYPE:
 		case NYX_DEVICE_INFO_LAST_RESET_TYPE:
-		case NYX_DEVICE_INFO_PART_NUMBER:
 		case NYX_DEVICE_INFO_PRODUCT_ID:
-		case NYX_DEVICE_INFO_PRODUCT_SKU:
 		case NYX_DEVICE_INFO_RADIO_TYPE:
 		case NYX_DEVICE_INFO_SERIAL_NUMBER:
 		case NYX_DEVICE_INFO_STORAGE_FREE:
@@ -301,13 +290,14 @@ nyx_error_t device_info_get_info (nyx_device_handle_t d, nyx_device_info_type_t 
 		case NYX_DEVICE_INFO_NDUID:
 			return copy_line(dev->nduid_str, dest, dest_len);
 
-		case NYX_DEVICE_INFO_PRODUCTION_NAME:
-			return copy_line(dev->product_name, dest, dest_len);
-
 		default:
 			return NYX_ERROR_INVALID_VALUE;
 	}
 
+	/*
+	 * This statement is never reached, but required to suppress a warning
+	 */
+	return NYX_ERROR_INVALID_VALUE;
 }
 
 // TODO: Work on the following code to get appropriate ram size and storage size values
