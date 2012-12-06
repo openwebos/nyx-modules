@@ -166,17 +166,16 @@ static general_settings_t sGeneralSettings =
 
 static float scaleX, scaleY;
 
-/* Using hardcoded values for now ,since ioctl FBIOGET_VSCREENINFO 
-   on /dev/fb0 is returning invalid values in qemux86 */
-
-#define SCREEN_HORIZONTAL_RES	1024
-#define SCREEN_VERTICAL_RES	768
-
 static int
 init_touchpanel(void)
 {
 	struct input_absinfo abs;
 	int  maxX, maxY, ret = -1;
+#if !defined(SCREEN_HORIZONTAL_RES) && !defined(SCREEN_VERTICAL_RES)
+	struct fb_var_screeninfo scr_info;
+	int16_t fd;
+#endif
+
     	
 	touchpanel_event_fd = open("/dev/input/touchscreen0", O_RDWR);
 	if(touchpanel_event_fd < 0) {
@@ -200,8 +199,27 @@ init_touchpanel(void)
 
     	init_gesture_state_machine(&sGeneralSettings, 1);
 
+#if !defined(SCREEN_HORIZONTAL_RES) && !defined(SCREEN_VERTICAL_RES)
+	fd = open("/dev/fb0", O_RDWR);
+	if (fd < 0) {
+		return NYX_ERROR_INVALID_FILE_ACCESS;
+	}
+
+	memset(&scr_info,0,sizeof(struct fb_var_screeninfo));
+
+	if (ioctl(fd, FBIOGET_VSCREENINFO, &scr_info) != 0) {
+		ret = NYX_ERROR_INVALID_OPERATION;
+		goto error;
+	}
+
+	close(fd);
+
+	scaleX = (float)scr_info.xres / (float)maxX;
+	scaleY = (float)scr_info.yres / (float)maxY;
+#else
 	scaleX = (float)SCREEN_HORIZONTAL_RES / (float)maxX;
 	scaleY = (float)SCREEN_VERTICAL_RES / (float)maxY;
+#endif
 
 	return 0;
 error:
