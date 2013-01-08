@@ -1,6 +1,6 @@
 /* @@@LICENSE
 *
-*      Copyright (c) 2010-2012 Hewlett-Packard Development Company, L.P.
+*      Copyright (c) 2010-2013 Hewlett-Packard Development Company, L.P.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -39,8 +39,8 @@
 #include <nyx/module/nyx_utils.h>
 
 nyx_device_t *nyxDev;
-nyx_device_callback_function_t alarm_fired_callback = NULL, msm_change_callback = NULL;
-bool reformatted = false, msm_status = false;
+nyx_device_callback_function_t alarm_fired_callback = NULL;
+bool reformatted = false;
 
 NYX_DECLARE_MODULE(NYX_DEVICE_SYSTEM, "System");
 
@@ -80,15 +80,6 @@ nyx_error_t nyx_module_open (nyx_instance_t i, nyx_device_t** d)
 
 	nyx_module_register_method(i, (nyx_device_t*)nyxDev, NYX_SYSTEM_REBOOT_MODULE_METHOD,
 		"system_reboot");
-
-	nyx_module_register_method(i, (nyx_device_t*)nyxDev, NYX_SYSTEM_SET_MSM_MODE_MODULE_METHOD,
-		"system_set_msm_mode");
-
-	nyx_module_register_method(i, (nyx_device_t*)nyxDev, NYX_SYSTEM_GET_MSM_STATE_MODULE_METHOD,
-		"system_get_msm_state");
-
-	nyx_module_register_method(i, (nyx_device_t*)nyxDev, NYX_SYSTEM_REGISTER_MSM_CHANGE_CALLBACK_MODULE_METHOD,
-		"system_register_msm_change_callback");
 
 	nyx_module_register_method(i, (nyx_device_t*)nyxDev, NYX_SYSTEM_ERASE_PARTITION_MODULE_METHOD,
 		"system_erase_partition");
@@ -212,20 +203,6 @@ nyx_error_t system_reboot(nyx_device_handle_t handle , nyx_system_shutdown_type_
 	return NYX_ERROR_NONE;
 }
 
-nyx_error_t system_set_msm_mode(nyx_device_handle_t handle , nyx_system_msm_action_t action, nyx_system_msm_return_code_t *ret)
-{
-	return NYX_ERROR_NOT_IMPLEMENTED;
-}
-
-nyx_error_t system_get_msm_state(nyx_device_handle_t handle , nyx_system_msm_state_t *state)
-{
-	return NYX_ERROR_NOT_IMPLEMENTED;
-}
-
-nyx_error_t system_register_msm_change_callback(nyx_device_handle_t handle, nyx_device_callback_function_t callback_func, void *context)
-{
-	return NYX_ERROR_NOT_IMPLEMENTED;
-}
 
 nyx_error_t system_erase_partition(nyx_device_handle_t handle, nyx_system_erase_type_t type, const char* error_msg)
 {	

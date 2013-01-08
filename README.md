@@ -22,7 +22,7 @@ Below are the tools and libraries (and their minimum versions) required to build
 * glib-2.0 2.32.1
 * make (any version)
 * openwebos/cmake-modules-webos 1.0.0 RC4
-* openwebos/nyx-lib 3.0.0 RC1
+* openwebos/nyx-lib 4.0.0 RC1
 * pkg-config 0.26
 
 ## Building
@@ -74,7 +74,7 @@ You will need to use `sudo` if you did not specify `WEBOS_INSTALL_ROOT`.
 Unless otherwise specified, all content, including all source code files and
 documentation files in this repository are:
 
-Copyright (c) 2010-2012 Hewlett-Packard Development Company, L.P.
+Copyright (c) 2010-2013 Hewlett-Packard Development Company, L.P.
 
 Unless otherwise specified or set forth in the NOTICE file, all content,
 including all source code files and documentation files in this repository are:
