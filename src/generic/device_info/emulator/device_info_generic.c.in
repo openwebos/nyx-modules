@@ -37,6 +37,14 @@
 #include <nyx/nyx_module.h>
 #include <nyx/module/nyx_utils.h>
 
+// Internal device info structure
+typedef struct {
+	nyx_device_t original;
+	char* product_name;
+	char* device_name;
+	char* nduid_str;
+} device_info_device_t;
+
 #define NDUID_LEN		(SHA_DIGEST_LENGTH * 2) /* 2 hex chars per byte */
 #define NDUID_DIR		"@WEBOS_INSTALL_EXECSTATEDIR@/nyx"
 #define NDUID_PATH		"@WEBOS_INSTALL_EXECSTATEDIR@/nyx/nduid"
@@ -180,7 +188,7 @@ nyx_error_t nyx_module_open(nyx_instance_t i, nyx_device_t** d)
 	if(NULL == d)
 		return NYX_ERROR_INVALID_VALUE;
 
-	nyx_device_info_device_t* device = (nyx_device_info_device_t*)calloc(sizeof(nyx_device_info_device_t),1);
+	device_info_device_t* device = (device_info_device_t*)calloc(sizeof(device_info_device_t),1);
 	nyx_error_t error = NYX_ERROR_NONE;
 
 	if(device == NULL) {
@@ -220,7 +228,7 @@ nyx_error_t nyx_module_close(nyx_device_handle_t d)
 	if(NULL == d)
 		return NYX_ERROR_INVALID_HANDLE;
 
-	nyx_device_info_device_t* device_info = (nyx_device_info_device_t*)d;
+	device_info_device_t* device_info = (device_info_device_t*)d;
 
 	free(device_info->nduid_str);
 	free(device_info);
@@ -253,13 +261,14 @@ nyx_error_t device_info_get_info (nyx_device_handle_t d, nyx_device_info_type_t 
 		return NYX_ERROR_GENERIC;
 	}
 
-	nyx_device_info_device_t* dev = (nyx_device_info_device_t*)d;
+	device_info_device_t* dev = (device_info_device_t*)d;
 
 	switch (type) {
 		case NYX_DEVICE_INFO_BATT_CH:
 		case NYX_DEVICE_INFO_BATT_RSP:
 		case NYX_DEVICE_INFO_BOARD_TYPE:
 		case NYX_DEVICE_INFO_BT_ADDR:
+		case NYX_DEVICE_INFO_HARDWARE_ID:
 		case NYX_DEVICE_INFO_HARDWARE_REVISION:
 		case NYX_DEVICE_INFO_INSTALLER:
 		case NYX_DEVICE_INFO_KEYBOARD_TYPE:
