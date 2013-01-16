@@ -350,7 +350,8 @@ static void handle_new_event(input_event_t *event)
 	else if ((event->type == EV_ABS) && (event->code == ABS_Y))
 			cachedY = (int) (event->value * scaleY);
 	
-	else if ((event->type == EV_KEY) && (event->code == BTN_TOUCH))
+	// qemu touchpanel sends BTN_TOUCH, virtualbox touchpanel sends BTN_MOUSE
+	else if ((event->type == EV_KEY) && ((event->code == BTN_TOUCH) || (event->code == BTN_MOUSE)))
 	{	
             // save touchButtonState (up or down)
 		touchButtonState = event->value;
