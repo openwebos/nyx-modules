@@ -25,5 +25,5 @@ set(MODULE_TOUCHPANEL_WEBOS_LINUX		YES)
 
 set(DEVICEINFO_PRODUCT_NAME			"ARMv7-A Emulator")
 
-add_definitions(-DKEYPAD_INPUT_DEVICE=\"/dev/input/event0\")
+add_definitions(-DKEYPAD_INPUT_DEVICE="/dev/input/keyboard0")
 

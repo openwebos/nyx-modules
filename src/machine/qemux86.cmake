@@ -25,4 +25,4 @@ set(MODULE_TOUCHPANEL_WEBOS_LINUX		YES)
 
 set(DEVICEINFO_PRODUCT_NAME			"x86 Emulator")
 
-add_definitions(-DKEYPAD_INPUT_DEVICE=\"/dev/input/event1\")
+add_definitions(-DKEYPAD_INPUT_DEVICE="/dev/input/keyboard0")
