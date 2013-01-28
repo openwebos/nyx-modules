@@ -24,7 +24,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <linux/input.h>
-#include <linux/fb.h>
+#include <linux/ioctl.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -152,6 +152,141 @@ static inline int64_t get_ts_tval(struct timeval *tv)
 	return tv->tv_sec * 1000000000LL + tv->tv_usec * 1000;
 }
 
+#define VBOXGUEST_DEVICE_NAME   "/dev/vboxguest"
+
+/** Version of VMMDevRequestHeader structure. */
+#define VMMDEV_REQUEST_HEADER_VERSION (0x10001)
+
+#define VBOXGUEST_IOCTL_FLAG     0
+#define VBOXGUEST_IOCTL_CODE_(Function, Size)  _IOC(_IOC_READ|_IOC_WRITE, 'V', (Function), (Size))
+#define VBOXGUEST_IOCTL_CODE(Function, Size)   VBOXGUEST_IOCTL_CODE_((Function) | VBOXGUEST_IOCTL_FLAG, Size)
+#define VBOXGUEST_IOCTL_VMMREQUEST(Size)       VBOXGUEST_IOCTL_CODE(3, (Size))
+
+#pragma pack(4)
+/** generic VMMDev request header */
+typedef struct
+{
+    /** size of the structure in bytes (including body). Filled by caller */
+    uint32_t size;
+    /** version of the structure. Filled by caller */
+    uint32_t version;
+    /** type of the request */
+    /*VMMDevRequestType*/ uint32_t requestType;
+    /** return code. Filled by VMMDev */
+    int32_t  rc;
+    /** reserved fields */
+    uint32_t reserved1;
+    uint32_t reserved2;
+} VMMdev_request_header;
+
+/** mouse status request structure */
+typedef struct
+{
+    /** header */
+        VMMdev_request_header header;
+    /** mouse feature mask */
+    uint32_t mouseFeatures;
+    /** mouse x position */
+    int32_t pointerXPos;
+    /** mouse y position */
+    int32_t pointerYPos;
+} VMMdev_req_mouse_status;
+
+/**
+ * mouse pointer shape/visibility change request
+ */
+typedef struct VMMdev_req_mouse_pointer
+{
+    /** Header. */
+        VMMdev_request_header header;
+    /** VBOX_MOUSE_POINTER_* bit flags. */
+    uint32_t fFlags;
+    /** x coordinate of hot spot. */
+    uint32_t xHot;
+    /** y coordinate of hot spot. */
+    uint32_t yHot;
+    /** Width of the pointer in pixels. */
+    uint32_t width;
+    /** Height of the pointer in scanlines. */
+    uint32_t height;
+    /** Pointer data. */
+    char pointerData[4];
+} VMMdev_req_mouse_pointer;
+
+/* The purpose of this function is to enable mouse pointer on the screen
+   for virtualbox qemux86 images, by firing appropriate ioctls to vbox driver */
+static void init_vbox_touchpanel(void)
+{
+        // Open the VirtualBox kernel module driver
+        int vbox_fd = open(VBOXGUEST_DEVICE_NAME, O_RDWR, 0);
+        if (vbox_fd < 0)
+        {
+                nyx_error("ERROR: vboxguest module open failed: %d\n", errno);
+                goto error;
+        }
+
+        VMMdev_req_mouse_status Req;
+        Req.header.size        = (uint32_t)sizeof(VMMdev_req_mouse_status);
+        Req.header.version     = 0x10001;   // VMMDEV_REQUEST_HEADER_VERSION;
+        Req.header.requestType = 2;         // VMMDevReq_SetMouseStatus;
+        Req.header.rc          = -1;        // VERR_GENERAL_FAILURE;
+        Req.header.reserved1   = 0;
+        Req.header.reserved2   = 0;
+
+        // set MouseGuestNeedsHostCursor (bit 2)
+        Req.mouseFeatures = (1 << 2);
+        Req.pointerXPos = 0;
+        Req.pointerYPos = 0;
+
+        // perform VMM request
+        if (ioctl(vbox_fd, VBOXGUEST_IOCTL_VMMREQUEST(Req.header.size), (void*)&Req.header) < 0)
+        {
+                nyx_error("ERROR: vboxguest rms ioctl failed: %d\n", errno);
+                goto error;
+        }
+        else if (Req.header.rc < 0)
+        {
+                nyx_error( "ERROR: vboxguest SetMouseStatus failed: %d\n", Req.header.rc);
+                goto error;
+        }
+
+	VMMdev_req_mouse_pointer mpReq;
+        mpReq.header.size        = (uint32_t)sizeof(VMMdev_req_mouse_pointer);
+        mpReq.header.version     = 0x10001; // VMMDEV_REQUEST_HEADER_VERSION;
+        mpReq.header.requestType = 3;       // VMMDevReq_SetPointerShape;
+        mpReq.header.rc          = -1;      // VERR_GENERAL_FAILURE;
+        mpReq.header.reserved1   = 0;
+        mpReq.header.reserved2   = 0;
+
+        // set fields for SetPointerShape (most importantly VISIBLE)
+        mpReq.fFlags = 1;           // VBOX_MOUSE_POINTER_VISIBLE;
+        mpReq.xHot = 0;
+        mpReq.yHot = 0;
+        mpReq.width = 0;
+        mpReq.height = 0;
+        mpReq.pointerData[0] = 0;
+        mpReq.pointerData[1] = 0;
+        mpReq.pointerData[2] = 0;
+        mpReq.pointerData[3] = 0;
+
+	// perform VMM request
+        if (ioctl(vbox_fd, VBOXGUEST_IOCTL_VMMREQUEST(mpReq.header.size), (void*)&mpReq.header) < 0)
+        {
+                nyx_error( "ERROR: vboxguest mpr ioctl failed: %d\n", errno);
+                goto error;
+        }
+        else if (mpReq.header.rc < 0)
+        {
+                nyx_error( "ERROR: vboxguest SetPointerShape failed: %d\n", mpReq.header.rc);
+                goto error;
+        }
+        return;
+error:
+        if(vbox_fd >= 0)
+                close(vbox_fd);
+        return;
+}
+
 
 /*
  * FIXME: The following two definitions are a temporary hack to work around
@@ -198,6 +333,8 @@ init_touchpanel(void)
 	}
 	maxY = abs.maximum;
 
+	// The following function is valid only for virtualbox qemux86 image
+	init_vbox_touchpanel();
     	init_gesture_state_machine(&sGeneralSettings, 1);
 
 	scaleX = (float)SCREEN_HORIZONTAL_RES / (float)maxX;
