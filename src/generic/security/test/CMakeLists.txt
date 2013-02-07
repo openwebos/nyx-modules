@@ -1,6 +1,6 @@
 # @@@LICENSE
 #
-#      Copyright (c) 2010-2012 Hewlett-Packard Development Company, L.P.
+#      Copyright (c) 2013 Hewlett-Packard Development Company, L.P.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,6 +16,5 @@
 #
 # LICENSE@@@
 
-add_subdirectory(display)
-add_subdirectory(device_info)
-add_subdirectory(security)
+add_executable(test_security test_security.c)
+target_link_libraries(test_security ${NYXLIB_LDFLAGS} ${GLIB2_LDFLAGS} ${SSL_LDFLAGS} -lrt -lpthread)

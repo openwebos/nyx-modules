@@ -1,6 +1,6 @@
 # @@@LICENSE
 #
-#      Copyright (c) 2010-2012 Hewlett-Packard Development Company, L.P.
+#      Copyright (c) 2013 Hewlett-Packard Development Company, L.P.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,6 +16,14 @@
 #
 # LICENSE@@@
 
-add_subdirectory(display)
-add_subdirectory(device_info)
-add_subdirectory(security)
+pkg_check_modules(SSL REQUIRED openssl)
+include_directories(${SSL_INCLUDE_DIRS})
+webos_add_compiler_flags(ALL ${SSL_CFLAGS_OTHER})
+
+webos_configure_header_files(${CMAKE_CURRENT_SOURCE_DIR})
+
+add_library(SecurityMain MODULE aes.c keystore.c rsa.c security.c sha.c)
+target_link_libraries(SecurityMain ${GLIB2_LDFLAGS} ${NYXLIB_LDFLAGS} ${SSL_LDFLAGS} -lrt -lpthread)
+install(TARGETS SecurityMain DESTINATION ${NYX_MODULE_DIR})
+
+add_subdirectory(test)
