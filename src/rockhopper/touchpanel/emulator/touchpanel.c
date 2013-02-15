@@ -25,6 +25,7 @@
 #include <sys/un.h>
 #include <linux/input.h>
 #include <linux/ioctl.h>
+#include <linux/fb.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -299,19 +300,45 @@ static general_settings_t sGeneralSettings =
 	.fingerDownThreshold = 0
 };
 
+#define FRAMEBUF_DEVICE_NAME    "/dev/fb"
+
+static int
+get_display_res(int* x, int* y)
+{
+	int ret = -1;
+	struct fb_var_screeninfo varinfo;
+
+	int displayFd = open(FRAMEBUF_DEVICE_NAME, O_RDONLY);
+	if (displayFd < 0)
+	{
+		nyx_error("Error in opening fb file");
+		return ret;
+	}
+
+	if (ioctl(displayFd, FBIOGET_VSCREENINFO, &varinfo) < 0)
+	{
+		nyx_error("Error in getting var screen info");
+		goto exit;
+	}
+
+	*x = varinfo.xres;
+	*y = varinfo.yres;
+
+	ret = 0;
+
+exit:
+	close(displayFd);
+	return ret;
+}
+
+
 static float scaleX, scaleY;
-
-/* Using hardcoded values for now ,since ioctl FBIOGET_VSCREENINFO 
-   on /dev/fb0 is returning invalid values in qemux86 */
-
-#define SCREEN_HORIZONTAL_RES	1024
-#define SCREEN_VERTICAL_RES	768
 
 static int
 init_touchpanel(void)
 {
 	struct input_absinfo abs;
-	int  maxX, maxY, ret = -1;
+	int  maxX, maxY, sXres, sYres, ret = -1;
     	
 	touchpanel_event_fd = open("/dev/input/touchscreen0", O_RDWR);
 	if(touchpanel_event_fd < 0) {
@@ -337,8 +364,15 @@ init_touchpanel(void)
 	init_vbox_touchpanel();
     	init_gesture_state_machine(&sGeneralSettings, 1);
 
-	scaleX = (float)SCREEN_HORIZONTAL_RES / (float)maxX;
-	scaleY = (float)SCREEN_VERTICAL_RES / (float)maxY;
+	/* Get the display resolution */
+	if (get_display_res(&sXres, &sYres) < 0)
+	{
+		nyx_error( "Failed to get display resolution");
+		goto error;
+	}
+
+	scaleX = (float)sXres / (float)maxX;
+	scaleY = (float)sYres / (float)maxY;
 
 	return 0;
 error:
