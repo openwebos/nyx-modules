@@ -1,0 +1,177 @@
+/* @@@LICENSE
+*
+*      Copyright (c) 2013 LG Electronics
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*
+* LICENSE@@@ */
+
+/*
+*******************************************************************
+* @file os_info.c
+*
+* @brief The OS_INFO module implementation.
+*******************************************************************
+*/
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+#include <nyx/nyx_module.h>
+#include <nyx/module/nyx_utils.h>
+
+#define READ_CORE_OS_RELEASE           "lsb_release -sr"
+#define READ_CORE_OS_NAME              "lsb_release -si"
+#define READ_CORE_OS_RELEASE_CODENAME  "lsb_release -sc"
+
+// Internal os info structure
+typedef struct {
+	nyx_device_t original;
+	const char* core_os_name;
+	const char* core_os_release;
+	const char* core_os_release_codename;
+} os_info_device_t;
+
+NYX_DECLARE_MODULE(NYX_DEVICE_OS_INFO, "OSInfo");
+
+static const char* read_lsb_release(const char *command)
+{
+	FILE *fp = NULL;
+	int temp_size = 0;
+	char* retString = NULL;
+
+	/* Open the command for reading. */
+	fp = popen(command, "r");
+
+	if (NULL != fp)
+	{
+		if( -1 == getline(&retString, &temp_size, fp))
+			retString = NULL; //make sure that returned string is NULL if error
+		/* close */
+		pclose(fp);
+	}
+
+	return retString;
+}
+
+nyx_error_t nyx_module_open(nyx_instance_t i, nyx_device_t** d)
+{
+	if(NULL == d)
+		return NYX_ERROR_INVALID_VALUE;
+
+	*d = NULL;
+	os_info_device_t* device = (os_info_device_t*)calloc(1, sizeof(os_info_device_t));
+
+	if (NULL != device)
+	{
+		nyx_module_register_method(i, (nyx_device_t*)device,
+			NYX_OS_INFO_QUERY_MODULE_METHOD, "os_info_query");
+
+		device->core_os_release = read_lsb_release(READ_CORE_OS_RELEASE);
+		device->core_os_name = read_lsb_release(READ_CORE_OS_NAME);
+		device->core_os_release_codename = read_lsb_release(READ_CORE_OS_RELEASE_CODENAME);
+
+		*d = (nyx_device_t*)device;
+
+		return NYX_ERROR_NONE;
+	}
+	else
+	{
+		return NYX_ERROR_OUT_OF_MEMORY;
+	}
+}
+
+nyx_error_t nyx_module_close(nyx_device_handle_t d)
+{
+	if(NULL == d)
+		return NYX_ERROR_INVALID_HANDLE;
+
+	os_info_device_t* os_info = (os_info_device_t*)d;
+
+	if(os_info->core_os_release)
+		free((char *) os_info->core_os_release);
+	if(os_info->core_os_name)
+		free((char *) os_info->core_os_name);
+	if(os_info->core_os_release_codename)
+		free((char *) os_info->core_os_release_codename);
+	free(os_info);
+
+	return NYX_ERROR_NONE;
+}
+
+nyx_error_t os_info_query(os_info_device_t* d, nyx_os_info_query_t query, const char** dest)
+{
+	if(NULL == d)
+	{
+		return NYX_ERROR_INVALID_HANDLE;
+	}
+	else
+	{
+		// return an empty string if there's an error
+		*dest = "";
+
+		switch (query)
+		{
+			case NYX_OS_INFO_WEBOS_BUILD:               // Implemented later
+			case NYX_OS_INFO_WEBOS_RELEASE_CODENAME:
+			case NYX_OS_INFO_WEBOS_IMAGENAME:
+			case NYX_OS_INFO_WEBOS_API_VERSION:
+			case NYX_OS_INFO_CORE_OS_KERNEL_VERSION:    // Implemented later
+			case NYX_OS_INFO_CORE_OS_KERNEL_CONFIG:     // Implemented later
+				return NYX_ERROR_NOT_IMPLEMENTED;
+
+			case NYX_OS_INFO_WEBOS_NAME:
+				*dest = "@DISTRO_NAME@";
+				return NYX_ERROR_NONE;
+
+			case NYX_OS_INFO_WEBOS_RELEASE:
+				*dest = "@DISTRO_VERSION@";
+				return NYX_ERROR_NONE;
+
+			case NYX_OS_INFO_WEBOS_PRERELEASE:          // change this after proper
+				                                        // variable is defined
+				*dest = "devel";
+				return NYX_ERROR_NONE;
+
+			case NYX_OS_INFO_CORE_OS_NAME:
+				if(NULL != d->core_os_name)
+				{
+					*dest = d->core_os_name;
+					return NYX_ERROR_NONE;
+				}
+				break;
+
+			case NYX_OS_INFO_CORE_OS_RELEASE:
+				if(NULL != d->core_os_release)
+				{
+					*dest = d->core_os_release;
+					return NYX_ERROR_NONE;
+				}
+				break;
+
+			case NYX_OS_INFO_CORE_OS_RELEASE_CODENAME:
+				if(NULL != d->core_os_release_codename)
+				{
+					*dest = d->core_os_release_codename;
+					return NYX_ERROR_NONE;
+				}
+				break;
+
+			default:
+				return NYX_ERROR_INVALID_VALUE;
+		}
+	}
+
+	// default return if switch-case is gone through
+	return NYX_ERROR_NOT_IMPLEMENTED;
+}
