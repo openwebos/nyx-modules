@@ -30,32 +30,81 @@
 #include <nyx/nyx_module.h>
 #include <nyx/module/nyx_utils.h>
 
-static const char *read_core_os_release = "lsb_release -sr";
-static const char *read_core_os_name = "lsb_release -si";
-static const char *read_core_os_release_codename = "lsb_release -sc";
+static const char * const read_core_os_release = "lsb_release -sr";
+static const char * const read_core_os_name = "lsb_release -si";
+static const char * const read_core_os_release_codename = "lsb_release -sc";
+static const char * const webos_image_name_file = "@WEBOS_INSTALL_WEBOS_SYSCONFDIR@/build/image-name";
+
+typedef enum {
+	OS_INFO_MODE_PIPE,
+	OS_INFO_MODE_FILE,
+} os_info_mode_t;
+
+// Internal OS info structure
+typedef struct {
+	nyx_device_t reserved;  //reserved for the original nyx_device_t usage
+	const char* core_os_release;
+	const char* core_os_name;
+	const char* core_os_release_codename;
+	const char* webos_imagename;
+} os_info_device_t;
 
 NYX_DECLARE_MODULE(NYX_DEVICE_OS_INFO, "OSInfo");
 
-static const char* read_lsb_release(const char *command)
+/*
+* Input parameters:
+* command - path to a file (when using OS_INFO_MODE_FILE)
+*           or a command line command to execute (when using OS_INFO_MODE_PIPE)
+* target  - output from file or command. If *target != NULL, it is assumed to
+*           contain valid information and contents will not be changed
+* mode    - the mode used for running 'command'. Currently only valid are
+*           OS_INFO_MODE_FILE and OS_INFO_MODE_PIPE
+*/
+static nyx_error_t read_info(const char *command, char **target, os_info_mode_t mode)
 {
 	FILE *fp = NULL;
-	int temp_size = 0;
-	char* retString = NULL; //has to be NULL for getline to work properly
+	size_t temp_size = 0;
+	nyx_error_t retVal = NYX_ERROR_GENERIC;
 
-	/* Open the command for reading. */
-	fp = popen(command, "r");
+	// check for existing string and return if found
+	if (NULL != *target)
+	{
+		return NYX_ERROR_NONE;
+	}
+
+	/* Open the command for reading. Remember to change close method as well */
+	switch(mode)
+	{
+		case OS_INFO_MODE_PIPE:
+			fp = popen(command, "r");
+			break;
+		case OS_INFO_MODE_FILE:
+			fp = fopen(command, "r");
+			break;
+	}
 
 	if (NULL != fp)
 	{
-		if( -1 == getline(&retString, &temp_size, fp))
-			retString = ""; //return empty string if error
+		if( -1 == getline(target, &temp_size, fp))
+			retVal = NYX_ERROR_INVALID_FILE_ACCESS;
+		else
+			retVal = NYX_ERROR_NONE;
+
 		/* close */
-		pclose(fp);
+		switch(mode)
+		{
+			case OS_INFO_MODE_PIPE:
+				pclose(fp);
+				break;
+			case OS_INFO_MODE_FILE:
+				fclose(fp);
+				break;
+		}
 	}
 	else
-		retString = ""; //return empty string if error
+		retVal = NYX_ERROR_DEVICE_UNAVAILABLE;
 
-	return retString;
+	return retVal;
 }
 
 nyx_error_t nyx_module_open(nyx_instance_t i, nyx_device_t** d)
@@ -64,20 +113,27 @@ nyx_error_t nyx_module_open(nyx_instance_t i, nyx_device_t** d)
 		return NYX_ERROR_INVALID_VALUE;
 
 	*d = NULL;
-	nyx_device_t* device = (nyx_device_t*)calloc(1, sizeof(nyx_device_t));
+	// use calloc to initialize 'reserved' member to 0
+	os_info_device_t* device = (os_info_device_t*) calloc(1, sizeof(os_info_device_t));
 
 	if (NULL != device)
 	{
-		nyx_module_register_method(i, device, NYX_OS_INFO_QUERY_MODULE_METHOD, "os_info_query");
+		// set all strings to NULL initially
+		device->core_os_release = NULL;
+		device->core_os_release_codename = NULL;
+		device->core_os_name = NULL;
+		device->webos_imagename = NULL;
 
-		*d = device;
+		nyx_module_register_method(i, (nyx_device_t*) device,
+		                           NYX_OS_INFO_QUERY_MODULE_METHOD,
+		                           "os_info_query");
+
+		*d = (nyx_device_t*) device;
 
 		return NYX_ERROR_NONE;
 	}
-	else
-	{
-		return NYX_ERROR_OUT_OF_MEMORY;
-	}
+
+	return NYX_ERROR_OUT_OF_MEMORY;
 }
 
 nyx_error_t nyx_module_close(nyx_device_handle_t d)
@@ -85,7 +141,31 @@ nyx_error_t nyx_module_close(nyx_device_handle_t d)
 	if(NULL == d)
 		return NYX_ERROR_INVALID_HANDLE;
 
-	nyx_device_t* os_info = (nyx_device_t*)d;
+	os_info_device_t* os_info = (os_info_device_t*) d;
+
+	if(NULL != os_info->core_os_release)
+	{
+		free((void *) os_info->core_os_release);
+		os_info->core_os_release = NULL;
+	}
+
+	if(NULL != os_info->core_os_release_codename)
+	{
+		free((void *) os_info->core_os_release_codename);
+		os_info->core_os_release_codename = NULL;
+	}
+
+	if(NULL != os_info->core_os_name)
+	{
+		free((void *) os_info->core_os_name);
+		os_info->core_os_name = NULL;
+	}
+
+	if(NULL != os_info->webos_imagename)
+	{
+		free((void *) os_info->webos_imagename);
+		os_info->webos_imagename = NULL;
+	}
 
 	free(os_info);
 
@@ -94,52 +174,87 @@ nyx_error_t nyx_module_close(nyx_device_handle_t d)
 
 nyx_error_t os_info_query(nyx_device_handle_t d, nyx_os_info_query_t query, const char** dest)
 {
+	// default error is NYX_ERROR_NONE to minimize code amount
+	nyx_error_t error = NYX_ERROR_NONE;
+
 	if(NULL == d)
 	{
 		return NYX_ERROR_INVALID_HANDLE;
 	}
-	else
+
+	os_info_device_t* os_info = (os_info_device_t*) d;
+	// return an empty string if there's an error
+	*dest = "";
+
+	switch (query)
 	{
-		// return an empty string if there's an error
-		*dest = "";
+		case NYX_OS_INFO_CORE_OS_KERNEL_VERSION:    // Implemented later
+		case NYX_OS_INFO_CORE_OS_KERNEL_CONFIG:     // Implemented later
+			error = NYX_ERROR_NOT_IMPLEMENTED;
+			break;
 
-		switch (query)
-		{
-			case NYX_OS_INFO_WEBOS_BUILD:
-			case NYX_OS_INFO_WEBOS_RELEASE_CODENAME:
-			case NYX_OS_INFO_WEBOS_IMAGENAME:
-			case NYX_OS_INFO_WEBOS_API_VERSION:
-			case NYX_OS_INFO_CORE_OS_KERNEL_VERSION:    // Implemented later
-			case NYX_OS_INFO_CORE_OS_KERNEL_CONFIG:     // Implemented later
-				return NYX_ERROR_NOT_IMPLEMENTED;
+		case NYX_OS_INFO_WEBOS_IMAGENAME:
+			error = read_info(webos_image_name_file,
+			                  (char **)&os_info->webos_imagename, OS_INFO_MODE_FILE);
 
-			case NYX_OS_INFO_WEBOS_NAME:
-				*dest = "@DISTRO_NAME@";
-				return NYX_ERROR_NONE;
+			if (NYX_ERROR_NONE == error)
+				*dest = os_info->webos_imagename;
+			break;
 
-			case NYX_OS_INFO_WEBOS_RELEASE:
-				*dest = "@DISTRO_VERSION@";
-				return NYX_ERROR_NONE;
+		case NYX_OS_INFO_WEBOS_BUILD:
+			*dest = "@WEBOS_DISTRO_BUILD_INFO@";
+			break;
 
-			case NYX_OS_INFO_WEBOS_PRERELEASE:          // change this after proper
-			                                            // variable is defined
-				*dest = "devel";
-				return NYX_ERROR_NONE;
+		case NYX_OS_INFO_WEBOS_RELEASE_CODENAME:
+			*dest = "@WEBOS_DISTRO_RELEASE_CODENAME@";
+			break;
 
-			case NYX_OS_INFO_CORE_OS_NAME:
-				*dest = read_lsb_release(read_core_os_name);
-				return NYX_ERROR_NONE;
+		case NYX_OS_INFO_WEBOS_API_VERSION:
+			*dest = "@WEBOS_DISTRO_API_VERSION@";
+			break;
 
-			case NYX_OS_INFO_CORE_OS_RELEASE:
-				*dest = read_lsb_release(read_core_os_release);
-				return NYX_ERROR_NONE;
+		case NYX_OS_INFO_WEBOS_NAME:
+			*dest = "@DISTRO_NAME@";
+			break;
 
-			case NYX_OS_INFO_CORE_OS_RELEASE_CODENAME:
-				*dest = read_lsb_release(read_core_os_release_codename);
-				return NYX_ERROR_NONE;
+		case NYX_OS_INFO_WEBOS_RELEASE:
+			*dest = "@DISTRO_VERSION@";
+			break;
 
-			default:
-				return NYX_ERROR_INVALID_VALUE;
-		}
+		case NYX_OS_INFO_WEBOS_PRERELEASE:       // change this after proper
+		                                         // variable is defined
+			*dest = "devel";
+			break;
+
+		case NYX_OS_INFO_CORE_OS_NAME:
+			error = read_info(read_core_os_name,
+			                  (char **)&os_info->core_os_name, OS_INFO_MODE_PIPE);
+
+			if (NYX_ERROR_NONE == error)
+				*dest = os_info->core_os_name;
+			break;
+
+		case NYX_OS_INFO_CORE_OS_RELEASE:
+			error = read_info(read_core_os_release,
+			                  (char **)&os_info->core_os_release, OS_INFO_MODE_PIPE);
+
+			if (NYX_ERROR_NONE == error)
+				*dest = os_info->core_os_release;
+			break;
+
+		case NYX_OS_INFO_CORE_OS_RELEASE_CODENAME:
+			error = read_info(read_core_os_release_codename,
+			                  (char **)&os_info->core_os_release_codename,
+			                  OS_INFO_MODE_PIPE);
+
+			if (NYX_ERROR_NONE == error)
+				*dest = os_info->core_os_release_codename;
+			break;
+
+		default:
+			error = NYX_ERROR_INVALID_VALUE;
+			break;
 	}
+
+	return error;
 }
