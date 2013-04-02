@@ -1,6 +1,7 @@
 /* @@@LICENSE
 *
 *      Copyright (c) 2012-2013 Hewlett-Packard Development Company, L.P.
+*      Copyright (c) 2013 LG Electronics
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -45,9 +46,9 @@ typedef struct {
 	char* nduid_str;
 } device_info_device_t;
 
-#define NDUID_LEN		(SHA_DIGEST_LENGTH * 2) /* 2 hex chars per byte */
-#define NDUID_DIR		"@WEBOS_INSTALL_EXECSTATEDIR@/nyx"
-#define NDUID_PATH		"@WEBOS_INSTALL_EXECSTATEDIR@/nyx/nduid"
+static const unsigned int  NDUID_LEN = SHA_DIGEST_LENGTH * 2; /* 2 hex chars per byte */
+static const char * const  NDUID_DIR = "@WEBOS_INSTALL_EXECSTATEDIR@/nyx";
+static const char * const  NDUID_PATH = "@WEBOS_INSTALL_EXECSTATEDIR@/nyx/nduid";
 
 NYX_DECLARE_MODULE(NYX_DEVICE_DEVICE_INFO, "DeviceInfo");
 
@@ -157,7 +158,7 @@ static nyx_error_t generate_device_nduid(char nduid[NDUID_LEN+1])
 	/* Need 3 bytes to print out a byte as a hex string */
 	char *sptr;
 	sptr = nduid;
-	for (int i = 0; i < SHA_DIGEST_LENGTH; i++) {
+	for(int i = 0; i < SHA_DIGEST_LENGTH; i++) {
 		snprintf(sptr, 3, "%02x", result[i]);
 		sptr += 2;
 	}
@@ -196,11 +197,14 @@ nyx_error_t nyx_module_open(nyx_instance_t i, nyx_device_t** d)
 		goto out;
 	}
 
+	/* device_info_get_info is deprecated */
 	nyx_module_register_method(i, (nyx_device_t*)device,
 		NYX_DEVICE_INFO_GET_INFO_MODULE_METHOD, "device_info_get_info");
+	nyx_module_register_method(i, (nyx_device_t*)device,
+		NYX_DEVICE_INFO_QUERY_MODULE_METHOD, "device_info_query");
 
 	device->nduid_str = (char*)malloc(sizeof(char) * (NDUID_LEN + 1));
-	if (device->nduid_str == NULL) {
+	if(device->nduid_str == NULL) {
 		error = NYX_ERROR_OUT_OF_MEMORY;
 		goto out;
 	}
@@ -237,13 +241,13 @@ nyx_error_t nyx_module_close(nyx_device_handle_t d)
 
 static nyx_error_t copy_line(const char* src, char* dest, size_t dest_len)
 {
-	if (NULL == src) {
+	if(NULL == src) {
 		return NYX_ERROR_OUT_OF_MEMORY;
 	}
-	if (NULL == dest || 0 == dest_len) {
+	if(NULL == dest || 0 == dest_len) {
 		return NYX_ERROR_GENERIC;
 	}
-	if (strlen(src) >= dest_len) {
+	if(strlen(src) >= dest_len) {
 		return NYX_ERROR_VALUE_OUT_OF_RANGE;
 	}
 
@@ -253,19 +257,22 @@ static nyx_error_t copy_line(const char* src, char* dest, size_t dest_len)
 	return NYX_ERROR_NONE;
 }
 
-nyx_error_t device_info_get_info (nyx_device_handle_t d, nyx_device_info_type_t type, char* dest, size_t dest_len)
+nyx_error_t device_info_query(nyx_device_handle_t d, nyx_device_info_type_t query, const char** dest)
 {
-	if(NULL == d) {
+	// default error is NYX_ERROR_NONE to minimize code amount
+	nyx_error_t error = NYX_ERROR_NONE;
+
+	if(NULL == d)
+	{
 		return NYX_ERROR_INVALID_HANDLE;
 	}
 
-	if ((NULL == dest) || (0 == dest_len)) {
-		return NYX_ERROR_GENERIC;
-	}
+	device_info_device_t* dev = (device_info_device_t*) d;
+	// return an empty string if there's an error
+	*dest = "";
 
-	device_info_device_t* dev = (device_info_device_t*)d;
-
-	switch (type) {
+	switch(query)
+	{
 		case NYX_DEVICE_INFO_BATT_CH:
 		case NYX_DEVICE_INFO_BATT_RSP:
 		case NYX_DEVICE_INFO_BOARD_TYPE:
@@ -286,29 +293,42 @@ nyx_error_t device_info_get_info (nyx_device_handle_t d, nyx_device_info_type_t 
 		// Need to figure out how to round off the value obtained
 		// from running statfs on root filesystem
 		case NYX_DEVICE_INFO_STORAGE_SIZE:
-			return NYX_ERROR_NOT_IMPLEMENTED;
+			error = NYX_ERROR_NOT_IMPLEMENTED;
+			break;
 
 		case NYX_DEVICE_INFO_MODEM_PRESENT:
-			if(dest_len < 2) {
-				return NYX_ERROR_GENERIC;
-			}
-			strcpy(dest, "N");
+			*dest = "N";
 			break;
 
 		case NYX_DEVICE_INFO_DEVICE_NAME:
-			return copy_line(dev->device_name, dest, dest_len);
+			*dest = (const char*) dev->device_name;
+			break;
 
 		case NYX_DEVICE_INFO_NDUID:
-			return copy_line(dev->nduid_str, dest, dest_len);
+			*dest = (const char*) dev->nduid_str;
+			break;
 
 		default:
-			return NYX_ERROR_INVALID_VALUE;
+			error = NYX_ERROR_INVALID_VALUE;
+			break;
 	}
 
-	/*
-	 * This statement is never reached, but required to suppress a warning
-	 */
-	return NYX_ERROR_INVALID_VALUE;
+	return error;
+}
+
+/* device_info_get_info is deprecated */
+nyx_error_t device_info_get_info(nyx_device_handle_t d, nyx_device_info_type_t type, char* dest, size_t dest_len)
+{
+	const char *tmp_dest = NULL;
+
+	nyx_error_t err = device_info_query(d, type, &tmp_dest);
+
+	if(NYX_ERROR_NONE == err)
+	{
+		err = copy_line(tmp_dest, dest, dest_len);
+	}
+
+	return err;
 }
 
 // TODO: Work on the following code to get appropriate ram size and storage size values
