@@ -18,11 +18,11 @@
 
 # Set default values (for standalone build). Using CACHE allows each
 # variable to be overridden from the command line during, say, an OE build.
-set(DISTRO_VERSION "(unknown)" CACHE STRING "Distribution Version Number")
-set(DISTRO_NAME "(unknown)" CACHE STRING "Distribution Name")
-set(WEBOS_DISTRO_API_VERSION "(unknown)" CACHE STRING "API Version")
-set(WEBOS_DISTRO_RELEASE_CODENAME "(unknown)" CACHE STRING "Release Codename")
-set(WEBOS_DISTRO_BUILD_INFO unofficial CACHE STRING "Build Type")
+set(DISTRO_VERSION "(unknown)" CACHE STRING "Distribution version number")
+set(DISTRO_NAME "(unknown)" CACHE STRING "Distribution name")
+set(WEBOS_DISTRO_API_VERSION "(unknown)" CACHE STRING "Distribution API version")
+set(WEBOS_DISTRO_RELEASE_CODENAME "(unknown)" CACHE STRING "Distribution release codename")
+set(WEBOS_DISTRO_BUILD_ID unofficial CACHE STRING "Distribution build ID (build number with optional prefix)")
 
 webos_configure_source_files(sourcelist os_info.c)
 nyx_create_module(OSInfoMain ${sourcelist})
