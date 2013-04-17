@@ -41,14 +41,19 @@
 // Internal device info structure
 typedef struct {
 	nyx_device_t original;
-	char* product_name;
-	char* device_name;
-	char* nduid_str;
+	const char* product_name;
+	const char* device_name;
+	const char* nduid_str;
+	const char* wifi_mac;
+	const char* bdaddr;
 } device_info_device_t;
 
 static const unsigned int  NDUID_LEN = SHA_DIGEST_LENGTH * 2; /* 2 hex chars per byte */
 static const char * const  NDUID_DIR = "@WEBOS_INSTALL_EXECSTATEDIR@/nyx";
 static const char * const  NDUID_PATH = "@WEBOS_INSTALL_EXECSTATEDIR@/nyx/nduid";
+// in emulator wifi MAC is actually eth0 MAC
+static const char * const  read_wifi_mac = "ifconfig eth0 | awk '/HWaddr/ {print $5}'";
+static const char * const  read_bdaddr = "hcitool dev | awk '/hci0/ {print $2}'";
 
 NYX_DECLARE_MODULE(NYX_DEVICE_DEVICE_INFO, "DeviceInfo");
 
@@ -110,7 +115,6 @@ error:
 		fclose(fp);
 	return error;
 }
-
 
 static nyx_error_t generate_device_nduid(char nduid[NDUID_LEN+1])
 {
@@ -184,6 +188,60 @@ static nyx_error_t get_device_nduid(char nduid[NDUID_LEN+1])
 	return NYX_ERROR_NONE;
 }
 
+/*
+* Input parameters:
+* command - command line command to execute
+* target  - output from the command. If *target != NULL, it is assumed to
+*           contain valid information and contents will not be changed
+*/
+static nyx_error_t execute_read_info(const char *command, char **target)
+{
+	FILE *fp = NULL;
+	size_t temp_size = 0;
+	size_t read_count = 0;
+	nyx_error_t retVal = NYX_ERROR_GENERIC;
+
+	// check for existing string and return if found
+	if (NULL != *target)
+	{
+		return NYX_ERROR_NONE;
+	}
+
+	fp = popen(command, "r");
+
+	if (NULL != fp)
+	{
+		read_count = getline(target, &temp_size, fp);
+
+		switch(read_count)
+		{
+			// if -1 means that command can't be executed so handle as device
+			// unavailable
+			case -1:
+				retVal = NYX_ERROR_DEVICE_UNAVAILABLE;
+				break;
+
+			// if command returned an empty string, return error and free target
+			case 0:
+				retVal = NYX_ERROR_DEVICE_UNAVAILABLE;
+				free(*target);
+				*target = NULL;
+				break;
+
+			default:
+				retVal = NYX_ERROR_NONE;
+				break;
+		}
+
+		pclose(fp);
+	}
+	else
+		retVal = NYX_ERROR_DEVICE_UNAVAILABLE;
+
+	return retVal;
+}
+
+
 nyx_error_t nyx_module_open(nyx_instance_t i, nyx_device_t** d)
 {
 	if(NULL == d)
@@ -203,7 +261,7 @@ nyx_error_t nyx_module_open(nyx_instance_t i, nyx_device_t** d)
 	nyx_module_register_method(i, (nyx_device_t*)device,
 		NYX_DEVICE_INFO_QUERY_MODULE_METHOD, "device_info_query");
 
-	device->nduid_str = (char*)malloc(sizeof(char) * (NDUID_LEN + 1));
+	device->nduid_str = (const char*)malloc(sizeof(char) * (NDUID_LEN + 1));
 	if(device->nduid_str == NULL) {
 		error = NYX_ERROR_OUT_OF_MEMORY;
 		goto out;
@@ -215,12 +273,14 @@ nyx_error_t nyx_module_open(nyx_instance_t i, nyx_device_t** d)
 
 	device->product_name = "@DEVICEINFO_PRODUCT_NAME@";
 	device->device_name = "@WEBOS_TARGET_MACHINE@";
+	device->wifi_mac = NULL;
+	device->bdaddr = NULL;
 
 	*d = (nyx_device_t*)device;
 	return error;
 
 nduid_err:
-	free(device->nduid_str);
+	free((void *) device->nduid_str);
 out:
 	free(device);
 	*d = NULL;
@@ -234,7 +294,19 @@ nyx_error_t nyx_module_close(nyx_device_handle_t d)
 
 	device_info_device_t* device_info = (device_info_device_t*)d;
 
-	free(device_info->nduid_str);
+	if(NULL!=device_info->wifi_mac)
+	{
+		free((void *) device_info->wifi_mac);
+		device_info->wifi_mac = NULL;
+	}
+
+	if(NULL!=device_info->bdaddr)
+	{
+		free((void *) device_info->bdaddr);
+		device_info->bdaddr = NULL;
+	}
+
+	free((void *) device_info->nduid_str);
 	free(device_info);
 	return NYX_ERROR_NONE;
 }
@@ -276,7 +348,6 @@ nyx_error_t device_info_query(nyx_device_handle_t d, nyx_device_info_type_t quer
 		case NYX_DEVICE_INFO_BATT_CH:
 		case NYX_DEVICE_INFO_BATT_RSP:
 		case NYX_DEVICE_INFO_BOARD_TYPE:
-		case NYX_DEVICE_INFO_BT_ADDR:
 		case NYX_DEVICE_INFO_HARDWARE_ID:
 		case NYX_DEVICE_INFO_HARDWARE_REVISION:
 		case NYX_DEVICE_INFO_INSTALLER:
@@ -286,7 +357,6 @@ nyx_error_t device_info_query(nyx_device_handle_t d, nyx_device_info_type_t quer
 		case NYX_DEVICE_INFO_RADIO_TYPE:
 		case NYX_DEVICE_INFO_SERIAL_NUMBER:
 		case NYX_DEVICE_INFO_STORAGE_FREE:
-		case NYX_DEVICE_INFO_WIFI_ADDR:
 		// Need to figure out the right way to get ram size
 		// The "MemTotal" value in /proc/meminfo doesn't match with the actual size
 		case NYX_DEVICE_INFO_RAM_SIZE:
@@ -296,16 +366,30 @@ nyx_error_t device_info_query(nyx_device_handle_t d, nyx_device_info_type_t quer
 			error = NYX_ERROR_NOT_IMPLEMENTED;
 			break;
 
+		case NYX_DEVICE_INFO_BT_ADDR:
+			error = execute_read_info(read_bdaddr, (char **)&dev->bdaddr);
+
+			if (NYX_ERROR_NONE == error)
+				*dest = dev->bdaddr;
+			break;
+
+		case NYX_DEVICE_INFO_WIFI_ADDR:
+			error = execute_read_info(read_wifi_mac, (char **)&dev->wifi_mac);
+
+			if (NYX_ERROR_NONE == error)
+				*dest = dev->wifi_mac;
+			break;
+
 		case NYX_DEVICE_INFO_MODEM_PRESENT:
 			*dest = "N";
 			break;
 
 		case NYX_DEVICE_INFO_DEVICE_NAME:
-			*dest = (const char*) dev->device_name;
+			*dest = dev->device_name;
 			break;
 
 		case NYX_DEVICE_INFO_NDUID:
-			*dest = (const char*) dev->nduid_str;
+			*dest = dev->nduid_str;
 			break;
 
 		default:
