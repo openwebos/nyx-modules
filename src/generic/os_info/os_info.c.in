@@ -30,6 +30,8 @@
 #include <nyx/nyx_module.h>
 #include <nyx/module/nyx_utils.h>
 
+static const char * const read_kernel_version = "uname -r";
+static const char * const read_kernel_config = "zgrep -E '=| is not set$' /proc/config.gz | sort";
 static const char * const read_core_os_release = "lsb_release -sr";
 static const char * const read_core_os_name = "lsb_release -si";
 static const char * const read_core_os_release_codename = "lsb_release -sc";
@@ -43,6 +45,8 @@ typedef enum {
 // Internal OS info structure
 typedef struct {
 	nyx_device_t reserved;  //reserved for the original nyx_device_t usage
+	const char* kernel_version;
+	const char* kernel_config;
 	const char* core_os_release;
 	const char* core_os_name;
 	const char* core_os_release_codename;
@@ -122,6 +126,8 @@ nyx_error_t nyx_module_open(nyx_instance_t i, nyx_device_t** d)
 		device->core_os_release = NULL;
 		device->core_os_release_codename = NULL;
 		device->core_os_name = NULL;
+		device->kernel_version = NULL;
+		device->kernel_config = NULL;
 		device->webos_imagename = NULL;
 
 		nyx_module_register_method(i, (nyx_device_t*) device,
@@ -142,6 +148,18 @@ nyx_error_t nyx_module_close(nyx_device_handle_t d)
 		return NYX_ERROR_INVALID_HANDLE;
 
 	os_info_device_t* os_info = (os_info_device_t*) d;
+
+	if(NULL != os_info->kernel_version)
+	{
+		free((void *) os_info->kernel_version);
+		os_info->kernel_version = NULL;
+	}
+
+	if(NULL != os_info->kernel_config)
+	{
+		free((void *) os_info->kernel_config);
+		os_info->kernel_config = NULL;
+	}
 
 	if(NULL != os_info->core_os_release)
 	{
@@ -188,9 +206,20 @@ nyx_error_t os_info_query(nyx_device_handle_t d, nyx_os_info_query_t query, cons
 
 	switch (query)
 	{
-		case NYX_OS_INFO_CORE_OS_KERNEL_VERSION:    // Implemented later
-		case NYX_OS_INFO_CORE_OS_KERNEL_CONFIG:     // Implemented later
-			error = NYX_ERROR_NOT_IMPLEMENTED;
+		case NYX_OS_INFO_CORE_OS_KERNEL_VERSION:
+			error = read_info(read_kernel_version,
+			                  (char **)&os_info->kernel_version, OS_INFO_MODE_PIPE);
+
+			if (NYX_ERROR_NONE == error)
+				*dest = os_info->kernel_version;
+			break;
+
+		case NYX_OS_INFO_CORE_OS_KERNEL_CONFIG:
+			error = read_info(read_kernel_config,
+			                  (char **)&os_info->kernel_config, OS_INFO_MODE_PIPE);
+
+			if (NYX_ERROR_NONE == error)
+				*dest = os_info->kernel_config;
 			break;
 
 		case NYX_OS_INFO_WEBOS_IMAGENAME:
