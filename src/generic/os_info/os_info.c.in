@@ -67,7 +67,6 @@ NYX_DECLARE_MODULE(NYX_DEVICE_OS_INFO, "OSInfo");
 static nyx_error_t read_info(const char *command, char **target, os_info_mode_t mode)
 {
 	FILE *fp = NULL;
-	size_t temp_size = 0;
 	nyx_error_t retVal = NYX_ERROR_GENERIC;
 
 	// check for existing string and return if found
@@ -76,7 +75,7 @@ static nyx_error_t read_info(const char *command, char **target, os_info_mode_t 
 		return NYX_ERROR_NONE;
 	}
 
-	/* Open the command for reading. Remember to change close method as well */
+	/* Open the command/file for reading. Remember to change close method as well */
 	switch(mode)
 	{
 		case OS_INFO_MODE_PIPE:
@@ -87,12 +86,17 @@ static nyx_error_t read_info(const char *command, char **target, os_info_mode_t 
 			break;
 	}
 
-	if (NULL != fp)
+	if(NULL != fp)
 	{
-		if( -1 == getline(target, &temp_size, fp))
-			retVal = NYX_ERROR_INVALID_FILE_ACCESS;
-		else
-			retVal = NYX_ERROR_NONE;
+		size_t temp_size = 0;
+
+		retVal = NYX_ERROR_NONE;
+
+		// when delim is set to 'EOF' getdelim supports multiple lines
+		if(-1 == getdelim(target, &temp_size, EOF, fp))
+		{
+			retVal = NYX_ERROR_DEVICE_UNAVAILABLE;
+		}
 
 		/* close */
 		switch(mode)
