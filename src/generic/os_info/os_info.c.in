@@ -234,7 +234,7 @@ nyx_error_t os_info_query(nyx_device_handle_t d, nyx_os_info_query_t query, cons
 				*dest = os_info->webos_imagename;
 			break;
 
-		case NYX_OS_INFO_WEBOS_BUILD:
+		case NYX_OS_INFO_WEBOS_BUILD_ID:
 			*dest = "@WEBOS_DISTRO_BUILD_ID@";
 			break;
 
