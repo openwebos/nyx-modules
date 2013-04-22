@@ -1,7 +1,7 @@
 /* @@@LICENSE
 *
 *      Copyright (c) 2012-2013 Hewlett-Packard Development Company, L.P.
-*      Copyright (c) 2013 LG Electronics
+*      Copyright (c) 2013 LG Electronics, Inc.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -211,26 +211,25 @@ static nyx_error_t execute_read_info(const char *command, char **target)
 
 	if (NULL != fp)
 	{
-		read_count = getline(target, &temp_size, fp);
+		size_t temp_size = 0;
+		size_t read_count = 0;
+		// when delim is set to 'EOF' getdelim supports multiple lines
+		read_count = getdelim(target, &temp_size, EOF, fp);
 
-		switch(read_count)
+		if(-1 == read_count)
 		{
-			// if -1 means that command can't be executed so handle as device
-			// unavailable
-			case -1:
-				retVal = NYX_ERROR_DEVICE_UNAVAILABLE;
-				break;
+			retVal = NYX_ERROR_DEVICE_UNAVAILABLE;
+		}
+		else
+		{
+			// remove unnecessary extra endline character
+			if (read_count > 0 && (*target)[read_count-1] == '\n')
+			{
+				(*target)[read_count-1] = '\0';
+			}
 
-			// if command returned an empty string, return error and free target
-			case 0:
-				retVal = NYX_ERROR_DEVICE_UNAVAILABLE;
-				free(*target);
-				*target = NULL;
-				break;
+			retVal = NYX_ERROR_NONE;
 
-			default:
-				retVal = NYX_ERROR_NONE;
-				break;
 		}
 
 		pclose(fp);
