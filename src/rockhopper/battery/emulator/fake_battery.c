@@ -34,6 +34,7 @@
 
 #include "batterylib.h"
 #include "battery_read.h"
+#include "fileutils.h"
 
 #include <nyx/module/nyx_log.h>
 
@@ -54,96 +55,6 @@
 #define CHARGE_MIN_TEMPERATURE_C 0
 #define CHARGE_MAX_TEMPERATURE_C 57
 #define BATTERY_MAX_TEMPERATURE_C  60
-
-/**
- * Returns string in pre-allocated buffer.
- */
-
-int
-FileGetString(const char *path, char *ret_string, size_t maxlen)
-{
-    GError *gerror = NULL;
-    char *contents = NULL;
-    gsize len;
-
-    if (!path || !g_file_get_contents(path, &contents, &len, &gerror)) {
-        if (gerror) {
-            nyx_critical( "%s: %s", __FUNCTION__, gerror->message);
-            g_error_free(gerror);
-        }
-        return -1;
-    }
-
-    g_strstrip(contents);
-    g_strlcpy(ret_string, contents, maxlen);
-
-    g_free(contents);
-
-    return 0;
-}
-
-int
-FileGetInt(const char *path, int *ret_data)
-{
-    GError *gerror = NULL;
-    char *contents = NULL;
-    char *endptr;
-    gsize len;
-    long int val;
-
-    if (!path || !g_file_get_contents(path, &contents, &len, &gerror)) {
-        if (gerror) {
-            nyx_critical( "%s: %s", __FUNCTION__, gerror->message);
-            g_error_free(gerror);
-        }
-        return -1;
-    }
-
-    val = strtol(contents, &endptr, 10);
-    if (endptr == contents) {
-        nyx_critical( "%s: Invalid input in %s.",
-            __FUNCTION__, path);
-        goto end;
-    }
-
-    if (ret_data)
-        *ret_data = val;
-end:
-    g_free(contents);
-    return 0;
-}
-
-int
-FileGetDouble(const char *path, double *ret_data)
-{
-    GError *gerror = NULL;
-    char *contents = NULL;
-    char *endptr;
-    gsize len;
-    float val;
-
-    if (!path || !g_file_get_contents(path, &contents, &len, &gerror)) {
-        if (gerror) {
-            nyx_critical( "%s: %s", __FUNCTION__, gerror->message);
-            g_error_free(gerror);
-        }
-        return -1;
-    }
-
-    val = strtod(contents, &endptr);
-    if (endptr == contents) {
-        nyx_critical( "%s: Invalid input in %s.",
-            __FUNCTION__, path);
-        goto end;
-    }
-
-    if (ret_data)
-        *ret_data = val;
-end:
-    g_free(contents);
-    return 0;
-}
-
 
 nyx_battery_ctia_t battery_ctia_params;
 
