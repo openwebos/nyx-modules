@@ -1,6 +1,7 @@
 /* @@@LICENSE
 *
 *      Copyright (c) 2010-2013 Hewlett-Packard Development Company, L.P.
+*      Copyright (c) 2013 LG Electronics, Inc
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -188,7 +189,18 @@ nyx_error_t system_shutdown(nyx_device_handle_t handle , nyx_system_shutdown_typ
 	if (handle != nyxDev) {
 		return NYX_ERROR_INVALID_HANDLE;
 	}
-	system("shutdown -h now");
+
+	switch (type) {
+		case NYX_SYSTEM_EMERG_SHUTDOWN:
+			system("halt -f");
+			break;
+		case NYX_SYSTEM_NORMAL_SHUTDOWN:
+		case NYX_SYSTEM_TEST_SHUTDOWN:
+		default:
+			system("shutdown -h now");
+			break;
+	}
+
 	return NYX_ERROR_NONE;
 }
 
@@ -199,7 +211,17 @@ nyx_error_t system_reboot(nyx_device_handle_t handle , nyx_system_shutdown_type_
 		return NYX_ERROR_INVALID_HANDLE;
 	}
 
-	system("reboot");
+	switch (type) {
+		case NYX_SYSTEM_EMERG_SHUTDOWN:
+			system("reboot -f");
+			break;
+		case NYX_SYSTEM_NORMAL_SHUTDOWN:
+		case NYX_SYSTEM_TEST_SHUTDOWN:
+		default:
+			system("reboot");
+			break;
+	}
+
 	return NYX_ERROR_NONE;
 }
 
