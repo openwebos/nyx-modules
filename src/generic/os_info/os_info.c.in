@@ -89,7 +89,7 @@ static nyx_error_t read_info(const char *command, char **target, os_info_mode_t 
 	if(NULL != fp)
 	{
 		size_t temp_size = 0;
-		size_t read_count = 0;
+		ssize_t read_count = 0;
 		// when delim is set to 'EOF' getdelim supports multiple lines
 		read_count = getdelim(target, &temp_size, EOF, fp);
 

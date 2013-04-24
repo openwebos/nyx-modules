@@ -197,8 +197,6 @@ static nyx_error_t get_device_nduid(char nduid[NDUID_LEN+1])
 static nyx_error_t execute_read_info(const char *command, char **target)
 {
 	FILE *fp = NULL;
-	size_t temp_size = 0;
-	size_t read_count = 0;
 	nyx_error_t retVal = NYX_ERROR_GENERIC;
 
 	// check for existing string and return if found
@@ -212,7 +210,7 @@ static nyx_error_t execute_read_info(const char *command, char **target)
 	if (NULL != fp)
 	{
 		size_t temp_size = 0;
-		size_t read_count = 0;
+		ssize_t read_count = 0;
 		// when delim is set to 'EOF' getdelim supports multiple lines
 		read_count = getdelim(target, &temp_size, EOF, fp);
 
