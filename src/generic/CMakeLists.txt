@@ -17,8 +17,16 @@
 #
 # LICENSE@@@
 
-add_subdirectory(display)
-add_subdirectory(device_info)
-add_subdirectory(security)
-add_subdirectory(os_info)
+if(MODULE_GENERIC_DISPLAY)
+	add_subdirectory(display)
+endif()
+if(MODULE_GENERIC_DEVICE_INFO)
+	add_subdirectory(device_info)
+endif()
+if(MODULE_GENERIC_SECURITY)
+	add_subdirectory(security)
+endif()
+if(MODULE_GENERIC_OS_INFO)
+	add_subdirectory(os_info)
+endif()
 

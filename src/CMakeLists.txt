@@ -1,6 +1,7 @@
 # @@@LICENSE
 #
 #      Copyright (c) 2010-2012 Hewlett-Packard Development Company, L.P.
+#      Copyright (c) 2013 LG Electronics, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +20,15 @@
 webos_machine_dep()
 webos_machine_impl_dep()
 webos_core_os_dep()
+
+# By default specify all modules to be compiled
+set(MODULE_SYSTEM_WEBOS_LINUX     YES CACHE BOOL "Include 'system' modules")
+set(MODULE_KEYS_WEBOS_LINUX       YES CACHE BOOL "Include 'keys' module")
+set(MODULE_TOUCHPANEL_WEBOS_LINUX YES CACHE BOOL "Include 'touchpanel' module")
+set(MODULE_GENERIC_OS_INFO        YES CACHE BOOL "Include generic 'OSInfo' module")
+set(MODULE_GENERIC_DEVICE_INFO    YES CACHE BOOL "Include generic 'DeviceInfo' module")
+set(MODULE_GENERIC_SECURITY       YES CACHE BOOL "Include generic 'Security' module")
+set(MODULE_GENERIC_DISPLAY        YES CACHE BOOL "Include generic 'Display' module")
 
 include(FindPkgConfig)
 

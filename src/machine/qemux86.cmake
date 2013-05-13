@@ -1,6 +1,7 @@
 # @@@LICENSE
 #
 #      Copyright (c) 2010-2012 Hewlett-Packard Development Company, L.P.
+#      Copyright (c) 2013 LG Electronics, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,11 +18,6 @@
 # LICENSE@@@
 
 # configuration file for qemux86.
-# specify all the modules to be compiled
-
-set(MODULE_SYSTEM_WEBOS_LINUX			YES)
-set(MODULE_KEYS_WEBOS_LINUX			YES)
-set(MODULE_TOUCHPANEL_WEBOS_LINUX		YES)
 
 set(DEVICEINFO_PRODUCT_NAME			"x86 Emulator")
 
