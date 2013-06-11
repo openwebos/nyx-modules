@@ -130,12 +130,14 @@ nyx_error_t aes_crypt(int index, int encrypt, nyx_security_aes_block_mode_t mode
 		goto out;
 	}
 
-	if (!EVP_CipherFinal_ex(&ctx, (unsigned char*)dest, destlen)) {
+	int tmplen;
+	if (!EVP_CipherFinal_ex(&ctx, (unsigned char*)dest + *destlen, &tmplen)) {
 		nyx_debug("EVP_CipherFinal_ex failed");
 		ERR_print_errors_fp(stderr);
 		result = NYX_ERROR_GENERIC;
 		goto out;
 	}
+	*destlen += tmplen;
 
 	if (encrypt) {
 		*destlen += *ivlen;
