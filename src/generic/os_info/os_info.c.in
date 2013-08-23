@@ -271,6 +271,10 @@ nyx_error_t os_info_query(nyx_device_handle_t d, nyx_os_info_query_t query, cons
 			*dest = "devel";
 			break;
 
+		case NYX_OS_INFO_MANUFACTURING_VERSION:
+			*dest = "@WEBOS_DISTRO_MANUFACTURING_VERSION@";
+			break;
+
 		case NYX_OS_INFO_CORE_OS_NAME:
 			error = read_info(read_core_os_name,
 			                  (char **)&os_info->core_os_name, OS_INFO_MODE_PIPE);

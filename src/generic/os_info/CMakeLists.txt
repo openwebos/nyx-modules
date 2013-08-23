@@ -23,6 +23,7 @@ set(DISTRO_NAME "(unknown)" CACHE STRING "Distribution name")
 set(WEBOS_DISTRO_API_VERSION "(unknown)" CACHE STRING "Distribution API version")
 set(WEBOS_DISTRO_RELEASE_CODENAME "(unknown)" CACHE STRING "Distribution release codename")
 set(WEBOS_DISTRO_BUILD_ID unofficial CACHE STRING "Distribution build ID (build number with optional prefix)")
+set(WEBOS_DISTRO_MANUFACTURING_VERSION "(unknown)" CACHE STRING "Distribution manufacturing version")
 
 webos_configure_source_files(sourcelist os_info.c)
 nyx_create_module(OSInfoMain ${sourcelist})
