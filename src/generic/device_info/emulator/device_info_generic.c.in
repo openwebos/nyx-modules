@@ -21,7 +21,7 @@
 * @file device_info_generic.c
 *
 * @brief The DEVICE_INFO module implementation.
-	 This file should only build for emulator.
+     This file should only build for emulator.
 *******************************************************************
 */
 
@@ -38,87 +38,115 @@
 #include <nyx/module/nyx_utils.h>
 
 // Internal device info structure
-typedef struct {
+typedef struct
+{
 	nyx_device_t original;
-	const char* product_name;
-	const char* device_name;
-	const char* nduid_str;
-	const char* wifi_mac;
-	const char* bdaddr;
+	const char *product_name;
+	const char *device_name;
+	const char *nduid_str;
+	const char *wifi_mac;
+	const char *bdaddr;
 } device_info_device_t;
 
-static const unsigned int  NDUID_LEN = SHA_DIGEST_LENGTH * 2; /* 2 hex chars per byte */
-static const char * const  NDUID_DIR = "@WEBOS_INSTALL_EXECSTATEDIR@/nyx";
-static const char * const  NDUID_PATH = "@WEBOS_INSTALL_EXECSTATEDIR@/nyx/nduid";
+static const unsigned int  NDUID_LEN = SHA_DIGEST_LENGTH *
+                                       2; /* 2 hex chars per byte */
+static const char *const  NDUID_DIR = "@WEBOS_INSTALL_EXECSTATEDIR@/nyx";
+static const char *const  NDUID_PATH = "@WEBOS_INSTALL_EXECSTATEDIR@/nyx/nduid";
 // in emulator wifi MAC is actually eth0 MAC
-static const char * const  read_wifi_mac = "ifconfig eth0 | awk '/HWaddr/ {print $5}'";
-static const char * const  read_bdaddr = "hcitool dev | awk '/hci0/ {print $2}'";
+static const char *const  read_wifi_mac =
+    "ifconfig eth0 | awk '/HWaddr/ {print $5}'";
+static const char *const  read_bdaddr = "hcitool dev | awk '/hci0/ {print $2}'";
 
 NYX_DECLARE_MODULE(NYX_DEVICE_DEVICE_INFO, "DeviceInfo");
 
 // Number of random bytes to read from /dev/urandom
 static const unsigned int random_bytes = 16;
 
-static nyx_error_t read_device_nduid(char nduid[NDUID_LEN+1])
+static nyx_error_t read_device_nduid(char nduid[NDUID_LEN + 1])
 {
 	nyx_error_t error = NYX_ERROR_NONE;
-	FILE *fp = fopen(NDUID_PATH,"r");
-	if(!fp) {
+	FILE *fp = fopen(NDUID_PATH, "r");
+
+	if (!fp)
+	{
 		nyx_info("Did not find stored nduid");
 		error = NYX_ERROR_NOT_FOUND;
 		goto error;
 	}
-	int ret = fread(nduid,NDUID_LEN,1,fp);
-	if(ret <= 0) {
-		nyx_error("Error in reading nduid from %s",NDUID_PATH);
+
+	int ret = fread(nduid, NDUID_LEN, 1, fp);
+
+	if (ret <= 0)
+	{
+		nyx_error("Error in reading nduid from %s", NDUID_PATH);
 		error = NYX_ERROR_NOT_FOUND;
 		goto error;
 	}
-	nduid[NDUID_LEN]='\0';
+
+	nduid[NDUID_LEN] = '\0';
 error:
-	if(fp)
+
+	if (fp)
+	{
 		fclose(fp);
+	}
+
 	return error;
 }
 
-static nyx_error_t write_device_nduid(const char nduid[NDUID_LEN+1])
+static nyx_error_t write_device_nduid(const char nduid[NDUID_LEN + 1])
 {
 	nyx_error_t error = NYX_ERROR_NONE;
 	struct stat st;
 
-	if(stat(NDUID_DIR,&st) != 0) {
-		if(mkdir(NDUID_DIR,0755) < 0) {
+	if (stat(NDUID_DIR, &st) != 0)
+	{
+		if (mkdir(NDUID_DIR, 0755) < 0)
+		{
 			return NYX_ERROR_GENERIC;
 		}
 	}
 
-	FILE *fp = fopen(NDUID_PATH,"w");
-	if(!fp) {
-		nyx_error("Error in opening file : %s",NDUID_PATH);
+	FILE *fp = fopen(NDUID_PATH, "w");
+
+	if (!fp)
+	{
+		nyx_error("Error in opening file : %s", NDUID_PATH);
 		error = NYX_ERROR_NOT_FOUND;
 		goto error;
 	}
-	int ret = fwrite(nduid,NDUID_LEN,1,fp);
-	if(ret <= 0) {
-		nyx_error("Error in writing nduid to %s",NDUID_PATH);
+
+	int ret = fwrite(nduid, NDUID_LEN, 1, fp);
+
+	if (ret <= 0)
+	{
+		nyx_error("Error in writing nduid to %s", NDUID_PATH);
 		error = NYX_ERROR_GENERIC;
 		goto error;
 	}
-	ret = chmod(NDUID_PATH,S_IRUSR|S_IRGRP|S_IROTH);
-	if(ret < 0) {
-		nyx_error("Error in changing permissions for %s",NDUID_PATH);
+
+	ret = chmod(NDUID_PATH, S_IRUSR | S_IRGRP | S_IROTH);
+
+	if (ret < 0)
+	{
+		nyx_error("Error in changing permissions for %s", NDUID_PATH);
 		error = NYX_ERROR_GENERIC;
 	}
+
 error:
-	if(fp)
+
+	if (fp)
+	{
 		fclose(fp);
+	}
+
 	return error;
 }
 
-static nyx_error_t generate_device_nduid(char nduid[NDUID_LEN+1])
+static nyx_error_t generate_device_nduid(char nduid[NDUID_LEN + 1])
 {
 	// Arbitrary bits selected as salt for SHA1 hashing
-	char salt[]={0x55,0xaa,0x30,0x08,0xce,0xfa,0xbe,0xba};
+	char salt[] = {0x55, 0xaa, 0x30, 0x08, 0xce, 0xfa, 0xbe, 0xba};
 	unsigned long offset = 0;
 	unsigned char input[random_bytes + sizeof(salt)];
 	unsigned char result[SHA_DIGEST_LENGTH];
@@ -126,63 +154,83 @@ static nyx_error_t generate_device_nduid(char nduid[NDUID_LEN+1])
 	nyx_error_t error = NYX_ERROR_NONE;
 	FILE *fp = NULL;
 
-	memcpy(input,salt,sizeof(salt));
+	memcpy(input, salt, sizeof(salt));
 	offset = sizeof(salt);
 
 	// Using random bytes from /dev/urandom to get unique id
 	// However unique ids like disk UUID, MAC address, IMEI no., and others
 	// can be used when implementing for other MACHINE-s.
 
-	fp = fopen("/dev/urandom","r");
-	if(fp) {
+	fp = fopen("/dev/urandom", "r");
+
+	if (fp)
+	{
 		unique_id = malloc(random_bytes);
-		if(!unique_id) {
+
+		if (!unique_id)
+		{
 			nyx_error("Error in allocation memory");
 			error = NYX_ERROR_OUT_OF_MEMORY;
 			goto error;
 		}
-		int ret = fread(unique_id,random_bytes,1,fp);
-		if(ret <= 0) {
+
+		int ret = fread(unique_id, random_bytes, 1, fp);
+
+		if (ret <= 0)
+		{
 			nyx_error("Error in reading from /dev/urandom");
 			error = NYX_ERROR_GENERIC;
 			goto error;
 		}
 	}
-	else {
+	else
+	{
 		nyx_error("Error in opening /dev/urandom");
 		error = NYX_ERROR_GENERIC;
 		goto error;
 	}
-	memcpy(input + offset,unique_id,random_bytes);
+
+	memcpy(input + offset, unique_id, random_bytes);
 	offset += random_bytes;
 
-	SHA1(input,offset,result);
+	SHA1(input, offset, result);
 
 	/* Need 3 bytes to print out a byte as a hex string */
 	char *sptr;
 	sptr = nduid;
-	for(int i = 0; i < SHA_DIGEST_LENGTH; i++) {
+
+	for (int i = 0; i < SHA_DIGEST_LENGTH; i++)
+	{
 		snprintf(sptr, 3, "%02x", result[i]);
 		sptr += 2;
 	}
+
 	*sptr = '\0';
 
 	error = write_device_nduid(nduid);
 
 error:
-	if(fp)
+
+	if (fp)
+	{
 		fclose(fp);
+	}
+
 	free(unique_id);
 	return error;
 }
 
-static nyx_error_t get_device_nduid(char nduid[NDUID_LEN+1])
+static nyx_error_t get_device_nduid(char nduid[NDUID_LEN + 1])
 {
-	if(NULL == nduid)
+	if (NULL == nduid)
+	{
 		return NYX_ERROR_INVALID_VALUE;
+	}
 
-	if(read_device_nduid(nduid) != NYX_ERROR_NONE)
+	if (read_device_nduid(nduid) != NYX_ERROR_NONE)
+	{
 		return generate_device_nduid(nduid);
+	}
 
 	return NYX_ERROR_NONE;
 }
@@ -213,16 +261,16 @@ static nyx_error_t execute_read_info(const char *command, char **target)
 		// when delim is set to 'EOF' getdelim supports multiple lines
 		read_count = getdelim(target, &temp_size, EOF, fp);
 
-		if(-1 == read_count)
+		if (-1 == read_count)
 		{
 			retVal = NYX_ERROR_DEVICE_UNAVAILABLE;
 		}
 		else
 		{
 			// remove unnecessary extra endline character
-			if (read_count > 0 && (*target)[read_count-1] == '\n')
+			if (read_count > 0 && (*target)[read_count - 1] == '\n')
 			{
-				(*target)[read_count-1] = '\0';
+				(*target)[read_count - 1] = '\0';
 			}
 
 			retVal = NYX_ERROR_NONE;
@@ -232,47 +280,58 @@ static nyx_error_t execute_read_info(const char *command, char **target)
 		pclose(fp);
 	}
 	else
+	{
 		retVal = NYX_ERROR_DEVICE_UNAVAILABLE;
+	}
 
 	return retVal;
 }
 
 
-nyx_error_t nyx_module_open(nyx_instance_t i, nyx_device_t** d)
+nyx_error_t nyx_module_open(nyx_instance_t i, nyx_device_t **d)
 {
-	if(NULL == d)
+	if (NULL == d)
+	{
 		return NYX_ERROR_INVALID_VALUE;
+	}
 
-	device_info_device_t* device = (device_info_device_t*)calloc(sizeof(device_info_device_t),1);
+	device_info_device_t *device = (device_info_device_t *)calloc(sizeof(
+	                                   device_info_device_t), 1);
 	nyx_error_t error = NYX_ERROR_NONE;
 
-	if(device == NULL) {
+	if (device == NULL)
+	{
 		error = NYX_ERROR_OUT_OF_MEMORY;
 		goto out;
 	}
 
 	/* device_info_get_info is deprecated */
-	nyx_module_register_method(i, (nyx_device_t*)device,
-		NYX_DEVICE_INFO_GET_INFO_MODULE_METHOD, "device_info_get_info");
-	nyx_module_register_method(i, (nyx_device_t*)device,
-		NYX_DEVICE_INFO_QUERY_MODULE_METHOD, "device_info_query");
+	nyx_module_register_method(i, (nyx_device_t *)device,
+	                           NYX_DEVICE_INFO_GET_INFO_MODULE_METHOD, "device_info_get_info");
+	nyx_module_register_method(i, (nyx_device_t *)device,
+	                           NYX_DEVICE_INFO_QUERY_MODULE_METHOD, "device_info_query");
 
-	device->nduid_str = (const char*)malloc(sizeof(char) * (NDUID_LEN + 1));
-	if(device->nduid_str == NULL) {
+	device->nduid_str = (const char *)malloc(sizeof(char) * (NDUID_LEN + 1));
+
+	if (device->nduid_str == NULL)
+	{
 		error = NYX_ERROR_OUT_OF_MEMORY;
 		goto out;
 	}
 
 	error = get_device_nduid(device->nduid_str);
-	if(error)
+
+	if (error)
+	{
 		goto nduid_err;
+	}
 
 	device->product_name = "@DEVICEINFO_PRODUCT_NAME@";
 	device->device_name = "@WEBOS_TARGET_MACHINE@";
 	device->wifi_mac = NULL;
 	device->bdaddr = NULL;
 
-	*d = (nyx_device_t*)device;
+	*d = (nyx_device_t *)device;
 	return error;
 
 nduid_err:
@@ -285,18 +344,20 @@ out:
 
 nyx_error_t nyx_module_close(nyx_device_handle_t d)
 {
-	if(NULL == d)
+	if (NULL == d)
+	{
 		return NYX_ERROR_INVALID_HANDLE;
+	}
 
-	device_info_device_t* device_info = (device_info_device_t*)d;
+	device_info_device_t *device_info = (device_info_device_t *)d;
 
-	if(NULL!=device_info->wifi_mac)
+	if (NULL != device_info->wifi_mac)
 	{
 		free((void *) device_info->wifi_mac);
 		device_info->wifi_mac = NULL;
 	}
 
-	if(NULL!=device_info->bdaddr)
+	if (NULL != device_info->bdaddr)
 	{
 		free((void *) device_info->bdaddr);
 		device_info->bdaddr = NULL;
@@ -307,39 +368,45 @@ nyx_error_t nyx_module_close(nyx_device_handle_t d)
 	return NYX_ERROR_NONE;
 }
 
-static nyx_error_t copy_line(const char* src, char* dest, size_t dest_len)
+static nyx_error_t copy_line(const char *src, char *dest, size_t dest_len)
 {
-	if(NULL == src) {
+	if (NULL == src)
+	{
 		return NYX_ERROR_OUT_OF_MEMORY;
 	}
-	if(NULL == dest || 0 == dest_len) {
+
+	if (NULL == dest || 0 == dest_len)
+	{
 		return NYX_ERROR_GENERIC;
 	}
-	if(strlen(src) >= dest_len) {
+
+	if (strlen(src) >= dest_len)
+	{
 		return NYX_ERROR_VALUE_OUT_OF_RANGE;
 	}
 
 	strncpy(dest, src, dest_len);
-	dest[dest_len-1]='\0';
+	dest[dest_len - 1] = '\0';
 
 	return NYX_ERROR_NONE;
 }
 
-nyx_error_t device_info_query(nyx_device_handle_t d, nyx_device_info_type_t query, const char** dest)
+nyx_error_t device_info_query(nyx_device_handle_t d,
+                              nyx_device_info_type_t query, const char **dest)
 {
 	// default error is NYX_ERROR_NONE to minimize code amount
 	nyx_error_t error = NYX_ERROR_NONE;
 
-	if(NULL == d)
+	if (NULL == d)
 	{
 		return NYX_ERROR_INVALID_HANDLE;
 	}
 
-	device_info_device_t* dev = (device_info_device_t*) d;
+	device_info_device_t *dev = (device_info_device_t *) d;
 	// return an empty string if there's an error
 	*dest = "";
 
-	switch(query)
+	switch (query)
 	{
 		case NYX_DEVICE_INFO_BATT_CH:
 		case NYX_DEVICE_INFO_BATT_RSP:
@@ -353,11 +420,13 @@ nyx_error_t device_info_query(nyx_device_handle_t d, nyx_device_info_type_t quer
 		case NYX_DEVICE_INFO_RADIO_TYPE:
 		case NYX_DEVICE_INFO_SERIAL_NUMBER:
 		case NYX_DEVICE_INFO_STORAGE_FREE:
-		// Need to figure out the right way to get ram size
-		// The "MemTotal" value in /proc/meminfo doesn't match with the actual size
+
+			// Need to figure out the right way to get ram size
+			// The "MemTotal" value in /proc/meminfo doesn't match with the actual size
 		case NYX_DEVICE_INFO_RAM_SIZE:
-		// Need to figure out how to round off the value obtained
-		// from running statfs on root filesystem
+
+			// Need to figure out how to round off the value obtained
+			// from running statfs on root filesystem
 		case NYX_DEVICE_INFO_STORAGE_SIZE:
 			error = NYX_ERROR_NOT_IMPLEMENTED;
 			break;
@@ -366,14 +435,20 @@ nyx_error_t device_info_query(nyx_device_handle_t d, nyx_device_info_type_t quer
 			error = execute_read_info(read_bdaddr, (char **)&dev->bdaddr);
 
 			if (NYX_ERROR_NONE == error)
+			{
 				*dest = dev->bdaddr;
+			}
+
 			break;
 
 		case NYX_DEVICE_INFO_WIFI_ADDR:
 			error = execute_read_info(read_wifi_mac, (char **)&dev->wifi_mac);
 
 			if (NYX_ERROR_NONE == error)
+			{
 				*dest = dev->wifi_mac;
+			}
+
 			break;
 
 		case NYX_DEVICE_INFO_MODEM_PRESENT:
@@ -397,13 +472,14 @@ nyx_error_t device_info_query(nyx_device_handle_t d, nyx_device_info_type_t quer
 }
 
 /* device_info_get_info is deprecated */
-nyx_error_t device_info_get_info(nyx_device_handle_t d, nyx_device_info_type_t type, char* dest, size_t dest_len)
+nyx_error_t device_info_get_info(nyx_device_handle_t d,
+                                 nyx_device_info_type_t type, char *dest, size_t dest_len)
 {
 	const char *tmp_dest = NULL;
 
 	nyx_error_t err = device_info_query(d, type, &tmp_dest);
 
-	if(NYX_ERROR_NONE == err)
+	if (NYX_ERROR_NONE == err)
 	{
 		err = copy_line(tmp_dest, dest, dest_len);
 	}
@@ -422,7 +498,8 @@ nyx_error_t device_info_get_info(nyx_device_handle_t d, nyx_device_info_type_t t
 #define _MAX_DIGITS_INTEGER(max_val) (sizeof(#max_val)+1) /* +1 for a possible minus sign */
 #define MAX_DIGITS_INTEGER(max_val) _MAX_DIGITS_INTEGER(max_val)
 
-static const size_t numeric_string_len = MAX_DIGITS_INTEGER(ULLONG_MAX) + 3; /* +3 for the " [KMG]B" unit of measure */
+static const size_t numeric_string_len = MAX_DIGITS_INTEGER(
+            ULLONG_MAX) + 3; /* +3 for the " [KMG]B" unit of measure */
 
 // KB to MB or MB to GB conversion factor
 static const unsigned int bytes_converter = 1024;
@@ -433,41 +510,56 @@ tatic nyx_error_t get_ram_size(char *ram_size, int size_len)
 	int val;
 	nyx_error_t error = NYX_ERROR_NONE;
 
-	if (numeric_string_len >= size_len) {
+	if (numeric_string_len >= size_len)
+	{
 		return NYX_ERROR_VALUE_OUT_OF_RANGE;
 	}
 
-	FILE *fp = fopen("/proc/meminfo","r");
-	if(!fp) {
+	FILE *fp = fopen("/proc/meminfo", "r");
+
+	if (!fp)
+	{
 		nyx_error("Unable to open /proc/meminfo");
 		error = NYX_ERROR_NOT_FOUND;
 		goto error;
-        }
+	}
 
-	if(fgets(line,sizeof(line),fp) <= 0) {
+	if (fgets(line, sizeof(line), fp) <= 0)
+	{
 		error = NYX_ERROR_GENERIC;
 		goto error;
 	}
 
-	sscanf(line,"MemTotal:        %dKB",&val);
+	sscanf(line, "MemTotal:        %dKB", &val);
 
 	// Convert Bytes to MB or GB
-	if(val > bytes_converter) {
+	if (val > bytes_converter)
+	{
 		// Round off the value
-		val = (val + 500)/bytes_converter;
-		if(val > bytes_converter) {
-			val = (val + 500)/bytes_converter;
-			sprintf(ram_size,"%d GB",val);
+		val = (val + 500) / bytes_converter;
+
+		if (val > bytes_converter)
+		{
+			val = (val + 500) / bytes_converter;
+			sprintf(ram_size, "%d GB", val);
 		}
 		else
-			sprintf(ram_size,"%d MB",val);
+		{
+			sprintf(ram_size, "%d MB", val);
+		}
 	}
 	else
-		sprintf(ram_size,"%d KB",val);
+	{
+		sprintf(ram_size, "%d KB", val);
+	}
 
 error:
-	if(fp)
+
+	if (fp)
+	{
 		fclose(fp);
+	}
+
 	return error;
 }
 
@@ -478,27 +570,33 @@ static nyx_error_t get_storage_size(char *storage_size, int size_len)
 
 	struct statfs buf;
 
-	if (numeric_string_len >= size_len) {
+	if (numeric_string_len >= size_len)
+	{
 		return NYX_ERROR_VALUE_OUT_OF_RANGE;
 	}
 
-	if (0 == statfs("/", &buf)) {
+	if (0 == statfs("/", &buf))
+	{
 		lluBytes = buf.f_blocks * (uint64_t) buf.f_bsize;
 	}
-	else {
+	else
+	{
 		nyx_error("Error in getting root storage size");
 		return NYX_ERROR_GENERIC;
 	}
 
 	// Convert bytes to MB or GB
 	size = lluBytes / (bytes_converter * bytes_converter);
-	if(size > bytes_converter) {
+
+	if (size > bytes_converter)
+	{
 		// Round off the value
-		size = (size + 500)/bytes_converter;
-		sprintf(storage_size,"%llu GB",size);
+		size = (size + 500) / bytes_converter;
+		sprintf(storage_size, "%llu GB", size);
 	}
-	else {
-		sprintf(storage_size,"%llu MB",size);
+	else
+	{
+		sprintf(storage_size, "%llu MB", size);
 	}
 
 	return NYX_ERROR_NONE;

@@ -30,27 +30,31 @@
 #include <nyx/nyx_module.h>
 #include <nyx/module/nyx_utils.h>
 
-static const char * const read_kernel_version = "uname -r";
-static const char * const read_kernel_config = "zgrep -E '=| is not set$' /proc/config.gz | sort";
-static const char * const read_core_os_release = "lsb_release -sr";
-static const char * const read_core_os_name = "lsb_release -si";
-static const char * const read_core_os_release_codename = "lsb_release -sc";
-static const char * const webos_image_name_file = "@WEBOS_INSTALL_WEBOS_SYSCONFDIR@/build/image-name";
+static const char *const read_kernel_version = "uname -r";
+static const char *const read_kernel_config =
+    "zgrep -E '=| is not set$' /proc/config.gz | sort";
+static const char *const read_core_os_release = "lsb_release -sr";
+static const char *const read_core_os_name = "lsb_release -si";
+static const char *const read_core_os_release_codename = "lsb_release -sc";
+static const char *const webos_image_name_file =
+    "@WEBOS_INSTALL_WEBOS_SYSCONFDIR@/build/image-name";
 
-typedef enum {
-	OS_INFO_MODE_PIPE,
-	OS_INFO_MODE_FILE,
+typedef enum
+{
+    OS_INFO_MODE_PIPE,
+    OS_INFO_MODE_FILE,
 } os_info_mode_t;
 
 // Internal OS info structure
-typedef struct {
+typedef struct
+{
 	nyx_device_t reserved;  //reserved for the original nyx_device_t usage
-	const char* kernel_version;
-	const char* kernel_config;
-	const char* core_os_release;
-	const char* core_os_name;
-	const char* core_os_release_codename;
-	const char* webos_imagename;
+	const char *kernel_version;
+	const char *kernel_config;
+	const char *core_os_release;
+	const char *core_os_name;
+	const char *core_os_release_codename;
+	const char *webos_imagename;
 } os_info_device_t;
 
 NYX_DECLARE_MODULE(NYX_DEVICE_OS_INFO, "OSInfo");
@@ -64,7 +68,8 @@ NYX_DECLARE_MODULE(NYX_DEVICE_OS_INFO, "OSInfo");
 * mode    - the mode used for running 'command'. Currently only valid are
 *           OS_INFO_MODE_FILE and OS_INFO_MODE_PIPE
 */
-static nyx_error_t read_info(const char *command, char **target, os_info_mode_t mode)
+static nyx_error_t read_info(const char *command, char **target,
+                             os_info_mode_t mode)
 {
 	FILE *fp = NULL;
 	nyx_error_t retVal = NYX_ERROR_GENERIC;
@@ -76,33 +81,34 @@ static nyx_error_t read_info(const char *command, char **target, os_info_mode_t 
 	}
 
 	/* Open the command/file for reading. Remember to change close method as well */
-	switch(mode)
+	switch (mode)
 	{
 		case OS_INFO_MODE_PIPE:
 			fp = popen(command, "r");
 			break;
+
 		case OS_INFO_MODE_FILE:
 			fp = fopen(command, "r");
 			break;
 	}
 
-	if(NULL != fp)
+	if (NULL != fp)
 	{
 		size_t temp_size = 0;
 		ssize_t read_count = 0;
 		// when delim is set to 'EOF' getdelim supports multiple lines
 		read_count = getdelim(target, &temp_size, EOF, fp);
 
-		if(-1 == read_count)
+		if (-1 == read_count)
 		{
 			retVal = NYX_ERROR_DEVICE_UNAVAILABLE;
 		}
 		else
 		{
 			// remove unnecessary extra endline character
-			if (read_count > 0 && (*target)[read_count-1] == '\n')
+			if (read_count > 0 && (*target)[read_count - 1] == '\n')
 			{
-				(*target)[read_count-1] = '\0';
+				(*target)[read_count - 1] = '\0';
 			}
 
 			retVal = NYX_ERROR_NONE;
@@ -111,30 +117,36 @@ static nyx_error_t read_info(const char *command, char **target, os_info_mode_t 
 
 
 		/* close */
-		switch(mode)
+		switch (mode)
 		{
 			case OS_INFO_MODE_PIPE:
 				pclose(fp);
 				break;
+
 			case OS_INFO_MODE_FILE:
 				fclose(fp);
 				break;
 		}
 	}
 	else
+	{
 		retVal = NYX_ERROR_DEVICE_UNAVAILABLE;
+	}
 
 	return retVal;
 }
 
-nyx_error_t nyx_module_open(nyx_instance_t i, nyx_device_t** d)
+nyx_error_t nyx_module_open(nyx_instance_t i, nyx_device_t **d)
 {
-	if(NULL == d)
+	if (NULL == d)
+	{
 		return NYX_ERROR_INVALID_VALUE;
+	}
 
 	*d = NULL;
 	// use calloc to initialize 'reserved' member to 0
-	os_info_device_t* device = (os_info_device_t*) calloc(1, sizeof(os_info_device_t));
+	os_info_device_t *device = (os_info_device_t *) calloc(1,
+	                           sizeof(os_info_device_t));
 
 	if (NULL != device)
 	{
@@ -146,11 +158,11 @@ nyx_error_t nyx_module_open(nyx_instance_t i, nyx_device_t** d)
 		device->kernel_config = NULL;
 		device->webos_imagename = NULL;
 
-		nyx_module_register_method(i, (nyx_device_t*) device,
+		nyx_module_register_method(i, (nyx_device_t *) device,
 		                           NYX_OS_INFO_QUERY_MODULE_METHOD,
 		                           "os_info_query");
 
-		*d = (nyx_device_t*) device;
+		*d = (nyx_device_t *) device;
 
 		return NYX_ERROR_NONE;
 	}
@@ -160,42 +172,44 @@ nyx_error_t nyx_module_open(nyx_instance_t i, nyx_device_t** d)
 
 nyx_error_t nyx_module_close(nyx_device_handle_t d)
 {
-	if(NULL == d)
+	if (NULL == d)
+	{
 		return NYX_ERROR_INVALID_HANDLE;
+	}
 
-	os_info_device_t* os_info = (os_info_device_t*) d;
+	os_info_device_t *os_info = (os_info_device_t *) d;
 
-	if(NULL != os_info->kernel_version)
+	if (NULL != os_info->kernel_version)
 	{
 		free((void *) os_info->kernel_version);
 		os_info->kernel_version = NULL;
 	}
 
-	if(NULL != os_info->kernel_config)
+	if (NULL != os_info->kernel_config)
 	{
 		free((void *) os_info->kernel_config);
 		os_info->kernel_config = NULL;
 	}
 
-	if(NULL != os_info->core_os_release)
+	if (NULL != os_info->core_os_release)
 	{
 		free((void *) os_info->core_os_release);
 		os_info->core_os_release = NULL;
 	}
 
-	if(NULL != os_info->core_os_release_codename)
+	if (NULL != os_info->core_os_release_codename)
 	{
 		free((void *) os_info->core_os_release_codename);
 		os_info->core_os_release_codename = NULL;
 	}
 
-	if(NULL != os_info->core_os_name)
+	if (NULL != os_info->core_os_name)
 	{
 		free((void *) os_info->core_os_name);
 		os_info->core_os_name = NULL;
 	}
 
-	if(NULL != os_info->webos_imagename)
+	if (NULL != os_info->webos_imagename)
 	{
 		free((void *) os_info->webos_imagename);
 		os_info->webos_imagename = NULL;
@@ -206,17 +220,18 @@ nyx_error_t nyx_module_close(nyx_device_handle_t d)
 	return NYX_ERROR_NONE;
 }
 
-nyx_error_t os_info_query(nyx_device_handle_t d, nyx_os_info_query_t query, const char** dest)
+nyx_error_t os_info_query(nyx_device_handle_t d, nyx_os_info_query_t query,
+                          const char **dest)
 {
 	// default error is NYX_ERROR_NONE to minimize code amount
 	nyx_error_t error = NYX_ERROR_NONE;
 
-	if(NULL == d)
+	if (NULL == d)
 	{
 		return NYX_ERROR_INVALID_HANDLE;
 	}
 
-	os_info_device_t* os_info = (os_info_device_t*) d;
+	os_info_device_t *os_info = (os_info_device_t *) d;
 	// return an empty string if there's an error
 	*dest = "";
 
@@ -227,7 +242,10 @@ nyx_error_t os_info_query(nyx_device_handle_t d, nyx_os_info_query_t query, cons
 			                  (char **)&os_info->kernel_version, OS_INFO_MODE_PIPE);
 
 			if (NYX_ERROR_NONE == error)
+			{
 				*dest = os_info->kernel_version;
+			}
+
 			break;
 
 		case NYX_OS_INFO_CORE_OS_KERNEL_CONFIG:
@@ -235,7 +253,10 @@ nyx_error_t os_info_query(nyx_device_handle_t d, nyx_os_info_query_t query, cons
 			                  (char **)&os_info->kernel_config, OS_INFO_MODE_PIPE);
 
 			if (NYX_ERROR_NONE == error)
+			{
 				*dest = os_info->kernel_config;
+			}
+
 			break;
 
 		case NYX_OS_INFO_WEBOS_IMAGENAME:
@@ -243,7 +264,10 @@ nyx_error_t os_info_query(nyx_device_handle_t d, nyx_os_info_query_t query, cons
 			                  (char **)&os_info->webos_imagename, OS_INFO_MODE_FILE);
 
 			if (NYX_ERROR_NONE == error)
+			{
 				*dest = os_info->webos_imagename;
+			}
+
 			break;
 
 		case NYX_OS_INFO_WEBOS_BUILD_ID:
@@ -267,7 +291,7 @@ nyx_error_t os_info_query(nyx_device_handle_t d, nyx_os_info_query_t query, cons
 			break;
 
 		case NYX_OS_INFO_WEBOS_PRERELEASE:       // change this after proper
-		                                         // variable is defined
+			// variable is defined
 			*dest = "devel";
 			break;
 
@@ -280,7 +304,10 @@ nyx_error_t os_info_query(nyx_device_handle_t d, nyx_os_info_query_t query, cons
 			                  (char **)&os_info->core_os_name, OS_INFO_MODE_PIPE);
 
 			if (NYX_ERROR_NONE == error)
+			{
 				*dest = os_info->core_os_name;
+			}
+
 			break;
 
 		case NYX_OS_INFO_CORE_OS_RELEASE:
@@ -288,7 +315,10 @@ nyx_error_t os_info_query(nyx_device_handle_t d, nyx_os_info_query_t query, cons
 			                  (char **)&os_info->core_os_release, OS_INFO_MODE_PIPE);
 
 			if (NYX_ERROR_NONE == error)
+			{
 				*dest = os_info->core_os_release;
+			}
+
 			break;
 
 		case NYX_OS_INFO_CORE_OS_RELEASE_CODENAME:
@@ -297,7 +327,10 @@ nyx_error_t os_info_query(nyx_device_handle_t d, nyx_os_info_query_t query, cons
 			                  OS_INFO_MODE_PIPE);
 
 			if (NYX_ERROR_NONE == error)
+			{
 				*dest = os_info->core_os_release_codename;
+			}
+
 			break;
 
 		default:

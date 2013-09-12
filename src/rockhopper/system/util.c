@@ -31,13 +31,15 @@
  */
 
 static bool
-	isNumber(const gchar* name)
+isNumber(const gchar *name)
 {
-	const char* sptr = name;
+	const char *sptr = name;
 	bool passes = true;
 
-	for (sptr = name; '\0' != *sptr; ++sptr) {
-		if (!g_ascii_isdigit(*sptr)) {
+	for (sptr = name; '\0' != *sptr; ++sptr)
+	{
+		if (!g_ascii_isdigit(*sptr))
+		{
 			passes = false;
 			break;
 		}
@@ -47,59 +49,83 @@ static bool
 }
 
 void
-	log_blame(const char* prefix)
+log_blame(const char *prefix)
 {
-	GDir* dir;
-	const gchar* entry;
+	GDir *dir;
+	const gchar *entry;
 
-	dir = g_dir_open ("/proc", 0, NULL);
+	dir = g_dir_open("/proc", 0, NULL);
 
-	if (NULL == dir) {
-		g_warning ("failed scanning /proc");
+	if (NULL == dir)
+	{
+		g_warning("failed scanning /proc");
 		return ;
 	}
 
-	while ((entry = g_dir_read_name (dir)) != NULL) {
-		if (isNumber (entry)) {
-			gchar* fdpath = g_build_path ("/", "/proc", entry, "fd", NULL);
+	while ((entry = g_dir_read_name(dir)) != NULL)
+	{
+		if (isNumber(entry))
+		{
+			gchar *fdpath = g_build_path("/", "/proc", entry, "fd", NULL);
 
-			if (g_file_test(fdpath, G_FILE_TEST_IS_DIR)) {
-				GDir* fddir;
-				fddir = g_dir_open (fdpath, 0, NULL);
+			if (g_file_test(fdpath, G_FILE_TEST_IS_DIR))
+			{
+				GDir *fddir;
+				fddir = g_dir_open(fdpath, 0, NULL);
 
-				if (NULL != dir) {
+				if (NULL != dir)
+				{
 					const gchar *nentry;
-					gchar* exe = NULL;
-					while ((nentry = g_dir_read_name (fddir)) != NULL) {
-						gchar *lnpath = g_build_path ("/", "/proc", entry, "fd", nentry, NULL);
-						if (g_file_test(lnpath, G_FILE_TEST_IS_SYMLINK)) {
-							gchar* link = g_file_read_link (lnpath, NULL);
-							if (g_ascii_strncasecmp (link, prefix, strlen(prefix)) == 0) {
-								if (NULL == exe) {
-									gchar *epath = g_build_path ("/", "/proc", entry, "exe", NULL);
-									if (g_file_test(epath, G_FILE_TEST_IS_SYMLINK)) {
-										exe = g_file_read_link (epath, NULL);
+					gchar *exe = NULL;
+
+					while ((nentry = g_dir_read_name(fddir)) != NULL)
+					{
+						gchar *lnpath = g_build_path("/", "/proc", entry, "fd", nentry, NULL);
+
+						if (g_file_test(lnpath, G_FILE_TEST_IS_SYMLINK))
+						{
+							gchar *link = g_file_read_link(lnpath, NULL);
+
+							if (g_ascii_strncasecmp(link, prefix, strlen(prefix)) == 0)
+							{
+								if (NULL == exe)
+								{
+									gchar *epath = g_build_path("/", "/proc", entry, "exe", NULL);
+
+									if (g_file_test(epath, G_FILE_TEST_IS_SYMLINK))
+									{
+										exe = g_file_read_link(epath, NULL);
 									}
-									else {
-										exe = g_strdup_printf ("(unknown PID=%s)", entry);
+									else
+									{
+										exe = g_strdup_printf("(unknown PID=%s)", entry);
 									}
 
-									g_warning ("Application %s (%s) has the following files open:", exe, entry);
-									g_free (epath);
+									g_warning("Application %s (%s) has the following files open:", exe, entry);
+									g_free(epath);
 								}
-								g_warning ("file: (%s)", link);
+
+								g_warning("file: (%s)", link);
 							}
-							g_free (link);
+
+							g_free(link);
 						}
-						g_free (lnpath);
+
+						g_free(lnpath);
 					}
-					g_dir_close (fddir);
+
+					g_dir_close(fddir);
+
 					if (NULL != exe)
-						g_free (exe);
+					{
+						g_free(exe);
+					}
 				}
 			}
-			g_free (fdpath);
+
+			g_free(fdpath);
 		}
 	}
-	g_dir_close (dir);
+
+	g_dir_close(dir);
 } /* log_blame */

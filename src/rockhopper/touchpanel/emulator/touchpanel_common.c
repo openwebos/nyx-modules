@@ -22,19 +22,21 @@
 #include <nyx/module/nyx_log.h>
 
 void
-set_event_params(input_event_t* pEvent, time_stamp_t* pTime, uint16_t type,
-               uint16_t code, int32_t value)
+set_event_params(input_event_t *pEvent, time_stamp_t *pTime, uint16_t type,
+                 uint16_t code, int32_t value)
 {
-    if (NULL == pEvent || NULL == pTime)
-    {
-        nyx_error("NULL parameter passed\n");
-        return; 
-    }
+	if (NULL == pEvent || NULL == pTime)
+	{
+		nyx_error("NULL parameter passed\n");
+		return;
+	}
 
-    ((struct timeval*)pTime)->tv_sec = ((time_stamp_t*)&pEvent->time)->time.tv_sec;
-    ((struct timeval*)pTime)->tv_usec = ((time_stamp_t*)&pEvent->time)->time.tv_nsec / 1000;
+	((struct timeval *)pTime)->tv_sec = ((time_stamp_t *)
+	                                     &pEvent->time)->time.tv_sec;
+	((struct timeval *)pTime)->tv_usec = ((time_stamp_t *)
+	                                      &pEvent->time)->time.tv_nsec / 1000;
 
-    pEvent->type = type;
-    pEvent->code = code;
-    pEvent->value = value;
+	pEvent->type = type;
+	pEvent->code = code;
+	pEvent->value = value;
 }

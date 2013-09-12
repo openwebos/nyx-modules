@@ -22,16 +22,20 @@
 
 nyx_error_t rsa_generate_key(int keylen, int *key_index)
 {
-	switch(keylen) {
+	switch (keylen)
+	{
 		case 2048:
 		case 4096:
 			break;
+
 		default:
 			return NYX_ERROR_INVALID_VALUE;
 	}
 
 	struct rsa_key_t *rsa_key = g_malloc(sizeof(struct rsa_key_t));
-	if (rsa_key == NULL) {
+
+	if (rsa_key == NULL)
+	{
 		return NYX_ERROR_OUT_OF_MEMORY;
 	}
 
@@ -39,11 +43,14 @@ nyx_error_t rsa_generate_key(int keylen, int *key_index)
 	rsa_key->rsa = RSA_new();
 	BIGNUM *bn = BN_new();
 	BN_set_word(bn, RSA_F4);
-	if (RSA_generate_key_ex(rsa_key->rsa, rsa_key->keylen, bn, NULL) == -1) {
+
+	if (RSA_generate_key_ex(rsa_key->rsa, rsa_key->keylen, bn, NULL) == -1)
+	{
 		nyx_debug("RSA_generate_key_ex failed");
 		ERR_print_errors_fp(stderr);
 		goto error;
 	}
+
 	BN_free(bn);
 
 	keystore_key_replace(keystore.rsa, rsa_key, key_index);
@@ -55,17 +62,23 @@ error:
 	return NYX_ERROR_GENERIC;
 }
 
-nyx_error_t rsa_crypt(int key_index, int encrypt, const char *src, int srclen, char *dest, int *destlen)
+nyx_error_t rsa_crypt(int key_index, int encrypt, const char *src, int srclen,
+                      char *dest, int *destlen)
 {
-	struct rsa_key_t *rsa_key = (struct rsa_key_t *) keystore_key_lookup(keystore.rsa, key_index);
-	if (rsa_key == NULL) {
+	struct rsa_key_t *rsa_key = (struct rsa_key_t *) keystore_key_lookup(
+	                                keystore.rsa, key_index);
+
+	if (rsa_key == NULL)
+	{
 		nyx_debug("%s: invalid key", __FUNCTION__);
 		return NYX_ERROR_INVALID_VALUE;
 	}
 
-	if (encrypt) {
+	if (encrypt)
+	{
 		/* RSA_PKCS1_OAEP_PADDING limit */
-		if (srclen >= (RSA_size(rsa_key->rsa) - 41)) {
+		if (srclen >= (RSA_size(rsa_key->rsa) - 41))
+		{
 			nyx_debug("src buffer too big");
 			return NYX_ERROR_INVALID_VALUE;
 		}
@@ -73,11 +86,14 @@ nyx_error_t rsa_crypt(int key_index, int encrypt, const char *src, int srclen, c
 
 	*destlen = RSA_size(rsa_key->rsa);
 
-	int (*crypt_fun)(int, const unsigned char*, unsigned char*, RSA*, int) =
-		encrypt ? RSA_public_encrypt : RSA_private_decrypt;
+	int (*crypt_fun)(int, const unsigned char *, unsigned char *, RSA *, int) =
+	    encrypt ? RSA_public_encrypt : RSA_private_decrypt;
 
-	*destlen = crypt_fun(srclen, (unsigned char*)src, (unsigned char*)dest, rsa_key->rsa, RSA_PKCS1_OAEP_PADDING);
-	if (*destlen == -1) {
+	*destlen = crypt_fun(srclen, (unsigned char *)src, (unsigned char *)dest,
+	                     rsa_key->rsa, RSA_PKCS1_OAEP_PADDING);
+
+	if (*destlen == -1)
+	{
 		nyx_debug("RSA crypt failed");
 		ERR_print_errors_fp(stderr);
 		return NYX_ERROR_GENERIC;

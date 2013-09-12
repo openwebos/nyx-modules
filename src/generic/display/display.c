@@ -32,22 +32,27 @@
 #include <unistd.h>
 #include <string.h>
 
-#define MM_PER_INCH		25.4f
+#define MM_PER_INCH     25.4f
 
 NYX_DECLARE_MODULE(NYX_DEVICE_DISPLAY, "Display");
 
-nyx_error_t nyx_module_open(nyx_instance_t i, nyx_device_t** d)
+nyx_error_t nyx_module_open(nyx_instance_t i, nyx_device_t **d)
 {
-	if (NULL == d) {
+	if (NULL == d)
+	{
 		return NYX_ERROR_INVALID_VALUE;
 	}
 
-	if (NULL != *d) {
+	if (NULL != *d)
+	{
 		return NYX_ERROR_INVALID_VALUE;
 	}
 
-	nyx_display_device_t* device = (nyx_display_device_t*)calloc(sizeof(nyx_display_device_t),1);
-	if (NULL == device) {
+	nyx_display_device_t *device = (nyx_display_device_t *)calloc(sizeof(
+	                                   nyx_display_device_t), 1);
+
+	if (NULL == device)
+	{
 		return NYX_ERROR_OUT_OF_MEMORY;
 	}
 
@@ -56,24 +61,30 @@ nyx_error_t nyx_module_open(nyx_instance_t i, nyx_device_t** d)
 	int16_t fd;
 
 	fd = open("/dev/fb0", O_RDWR);
-	if (fd < 0) {
+
+	if (fd < 0)
+	{
 		return NYX_ERROR_INVALID_FILE_ACCESS;
 	}
 
 	struct fb_var_screeninfo scr_info;
-	memset(&scr_info,0,sizeof(struct fb_var_screeninfo));
 
-	if (ioctl(fd,FBIOGET_VSCREENINFO, &scr_info) != 0) {
+	memset(&scr_info, 0, sizeof(struct fb_var_screeninfo));
+
+	if (ioctl(fd, FBIOGET_VSCREENINFO, &scr_info) != 0)
+	{
 		error = NYX_ERROR_INVALID_OPERATION;
 		goto out;
 	}
 
-	if (scr_info.xres == 0 || scr_info.yres == 0) {
+	if (scr_info.xres == 0 || scr_info.yres == 0)
+	{
 		error = NYX_ERROR_VALUE_OUT_OF_RANGE;
 		goto out;
 	}
 
-	if (scr_info.width == 0 || scr_info.height == 0) {
+	if (scr_info.width == 0 || scr_info.height == 0)
+	{
 		error = NYX_ERROR_VALUE_OUT_OF_RANGE;
 		goto out;
 	}
@@ -84,14 +95,19 @@ nyx_error_t nyx_module_open(nyx_instance_t i, nyx_device_t** d)
 	/* height & width variables in fb_var_screeninfo are in mm, so converting them to inches
 	 using MM_PER_INCH macro */
 
-	device->display_metrics.horizontal_dpi = ((float)scr_info.xres * MM_PER_INCH)/(float)scr_info.width;
-	device->display_metrics.vertical_dpi = ((float)scr_info.yres * MM_PER_INCH)/(float)scr_info.height;
+	device->display_metrics.horizontal_dpi = ((float)scr_info.xres *
+	        MM_PER_INCH) / (float)scr_info.width;
+	device->display_metrics.vertical_dpi = ((float)scr_info.yres * MM_PER_INCH) /
+	                                       (float)scr_info.height;
 
 out:
-	if (fd >= 0)
-		close(fd);
 
-	*d = (nyx_device_t*)device;
+	if (fd >= 0)
+	{
+		close(fd);
+	}
+
+	*d = (nyx_device_t *)device;
 	return error;
 }
 

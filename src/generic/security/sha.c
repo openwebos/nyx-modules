@@ -19,36 +19,45 @@
 #include <security.h>
 #include <string.h>
 
-static const struct sha_algo_data_t {
+static const struct sha_algo_data_t
+{
 	const char *name;
-	const EVP_MD* (*md)();
-} sha_algo_data[] = {
+	const EVP_MD *(*md)();
+} sha_algo_data[] =
+{
 	{ SN_sha256, EVP_sha256 },
 	{ SN_sha512, EVP_sha512 },
 };
 
-static const struct sha_algo_data_t* sha_algo_data_lookup(const char *name)
+static const struct sha_algo_data_t *sha_algo_data_lookup(const char *name)
 {
 	int i;
-	for (i = 0; i < sizeof(sha_algo_data)/sizeof(sha_algo_data[0]); ++i) {
-		if (strcmp(sha_algo_data[i].name, name) == 0) {
+
+	for (i = 0; i < sizeof(sha_algo_data) / sizeof(sha_algo_data[0]); ++i)
+	{
+		if (strcmp(sha_algo_data[i].name, name) == 0)
+		{
 			return &sha_algo_data[i];
 		}
 	}
+
 	return NULL;
 }
 
 /* running hashing context (only single concurrent hash operation supported) */
-static EVP_MD_CTX* running_mdctx = NULL;
+static EVP_MD_CTX *running_mdctx = NULL;
 
 nyx_error_t sha_init(const char *name)
 {
 	const struct sha_algo_data_t *algo = sha_algo_data_lookup(name);
-	if (algo == NULL) {
+
+	if (algo == NULL)
+	{
 		return NYX_ERROR_INVALID_VALUE;
 	}
 
-	if (running_mdctx != NULL) {
+	if (running_mdctx != NULL)
+	{
 		EVP_MD_CTX_cleanup(running_mdctx);
 		EVP_MD_CTX_destroy(running_mdctx);
 	}
@@ -56,7 +65,8 @@ nyx_error_t sha_init(const char *name)
 	running_mdctx = EVP_MD_CTX_create();
 	EVP_MD_CTX_init(running_mdctx);
 
-	if (EVP_DigestInit_ex(running_mdctx, algo->md(), NULL) != 1) {
+	if (EVP_DigestInit_ex(running_mdctx, algo->md(), NULL) != 1)
+	{
 		return NYX_ERROR_GENERIC;
 	}
 
@@ -65,11 +75,13 @@ nyx_error_t sha_init(const char *name)
 
 nyx_error_t sha_update(const char *src, int srclen)
 {
-	if (running_mdctx == NULL) {
+	if (running_mdctx == NULL)
+	{
 		return NYX_ERROR_INVALID_VALUE;
 	}
 
-	if (EVP_DigestUpdate(running_mdctx, (const void*)src, (size_t)srclen) != 1) {
+	if (EVP_DigestUpdate(running_mdctx, (const void *)src, (size_t)srclen) != 1)
+	{
 		return NYX_ERROR_GENERIC;
 	}
 
@@ -78,11 +90,14 @@ nyx_error_t sha_update(const char *src, int srclen)
 
 nyx_error_t sha_finalize(char *dest, int *destlen)
 {
-	if (running_mdctx == NULL) {
+	if (running_mdctx == NULL)
+	{
 		return NYX_ERROR_INVALID_VALUE;
 	}
 
-	if (EVP_DigestFinal_ex(running_mdctx, (unsigned char*)dest, (unsigned int*)destlen) != 1) {
+	if (EVP_DigestFinal_ex(running_mdctx, (unsigned char *)dest,
+	                       (unsigned int *)destlen) != 1)
+	{
 		return NYX_ERROR_GENERIC;
 	}
 

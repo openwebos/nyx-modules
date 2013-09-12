@@ -46,73 +46,90 @@ NYX_DECLARE_MODULE(NYX_DEVICE_SYSTEM, "System");
 
 void AlarmFiredCB(void)
 {
-	if (alarm_fired_callback) {
-		alarm_fired_callback(nyxDev,NYX_CALLBACK_STATUS_DONE,NULL);
+	if (alarm_fired_callback)
+	{
+		alarm_fired_callback(nyxDev, NYX_CALLBACK_STATUS_DONE, NULL);
 	}
 }
 
-nyx_error_t nyx_module_open (nyx_instance_t i, nyx_device_t** d)
+nyx_error_t nyx_module_open(nyx_instance_t i, nyx_device_t **d)
 {
-	if (nyxDev) {
+	if (nyxDev)
+	{
 		nyx_info("System module already open.");
 		return NYX_ERROR_NONE;
 	}
 
-	nyxDev = (nyx_device_t*)calloc(sizeof(nyx_device_t), 1);
-	if (NULL == nyxDev) {
+	nyxDev = (nyx_device_t *)calloc(sizeof(nyx_device_t), 1);
+
+	if (NULL == nyxDev)
+	{
 		return NYX_ERROR_OUT_OF_MEMORY;
 	}
 
-	nyx_module_register_method(i, (nyx_device_t*)nyxDev, NYX_SYSTEM_SET_ALARM_MODULE_METHOD,
-		"system_set_alarm");
+	nyx_module_register_method(i, (nyx_device_t *)nyxDev,
+	                           NYX_SYSTEM_SET_ALARM_MODULE_METHOD,
+	                           "system_set_alarm");
 
-	nyx_module_register_method(i, (nyx_device_t*)nyxDev, NYX_SYSTEM_QUERY_NEXT_ALARM_MODULE_METHOD,
-		"system_query_next_alarm");
+	nyx_module_register_method(i, (nyx_device_t *)nyxDev,
+	                           NYX_SYSTEM_QUERY_NEXT_ALARM_MODULE_METHOD,
+	                           "system_query_next_alarm");
 
-	nyx_module_register_method(i, (nyx_device_t*)nyxDev, NYX_SYSTEM_QUERY_RTC_TIME_MODULE_METHOD,
-		"system_query_rtc_time");
+	nyx_module_register_method(i, (nyx_device_t *)nyxDev,
+	                           NYX_SYSTEM_QUERY_RTC_TIME_MODULE_METHOD,
+	                           "system_query_rtc_time");
 
-	nyx_module_register_method(i, (nyx_device_t*)nyxDev, NYX_SYSTEM_SUSPEND_MODULE_METHOD,
-		"system_suspend");
+	nyx_module_register_method(i, (nyx_device_t *)nyxDev,
+	                           NYX_SYSTEM_SUSPEND_MODULE_METHOD,
+	                           "system_suspend");
 
-	nyx_module_register_method(i, (nyx_device_t*)nyxDev, NYX_SYSTEM_SHUTDOWN_MODULE_METHOD,
-		"system_shutdown");
+	nyx_module_register_method(i, (nyx_device_t *)nyxDev,
+	                           NYX_SYSTEM_SHUTDOWN_MODULE_METHOD,
+	                           "system_shutdown");
 
-	nyx_module_register_method(i, (nyx_device_t*)nyxDev, NYX_SYSTEM_REBOOT_MODULE_METHOD,
-		"system_reboot");
+	nyx_module_register_method(i, (nyx_device_t *)nyxDev,
+	                           NYX_SYSTEM_REBOOT_MODULE_METHOD,
+	                           "system_reboot");
 
-	nyx_module_register_method(i, (nyx_device_t*)nyxDev, NYX_SYSTEM_ERASE_PARTITION_MODULE_METHOD,
-		"system_erase_partition");
+	nyx_module_register_method(i, (nyx_device_t *)nyxDev,
+	                           NYX_SYSTEM_ERASE_PARTITION_MODULE_METHOD,
+	                           "system_erase_partition");
 
-	*d = (nyx_device_t*)nyxDev;
+	*d = (nyx_device_t *)nyxDev;
 	return NYX_ERROR_NONE;
 }
 
-nyx_error_t nyx_module_close (nyx_device_t* d)
+nyx_error_t nyx_module_close(nyx_device_t *d)
 {
 	rtc_close();
 	return NYX_ERROR_NONE;
 }
 
-nyx_error_t system_set_alarm(nyx_device_handle_t handle, time_t time, nyx_device_callback_function_t callback_func, void *context)
+nyx_error_t system_set_alarm(nyx_device_handle_t handle, time_t time,
+                             nyx_device_callback_function_t callback_func, void *context)
 {
-	if (handle != nyxDev) {
+	if (handle != nyxDev)
+	{
 		return NYX_ERROR_INVALID_HANDLE;
 	}
 
-	if (rtc_open() == 0) {
+	if (rtc_open() == 0)
+	{
 		return NYX_ERROR_INVALID_OPERATION;
 	}
 
-	if (!time) {
+	if (!time)
+	{
 		rtc_clear_alarm();
 	}
-	else {
-		if (rtc_set_alarm_time(time) == 0) {
+	else
+	{
+		if (rtc_set_alarm_time(time) == 0)
+		{
 			return NYX_ERROR_INVALID_OPERATION;
 		}
 
-		if(callback_func)
+		if (callback_func)
 		{
 			alarm_fired_callback = callback_func;
 			rtc_add_watch(AlarmFiredCB);
@@ -129,15 +146,18 @@ nyx_error_t system_set_alarm(nyx_device_handle_t handle, time_t time, nyx_device
 
 nyx_error_t system_query_next_alarm(nyx_device_handle_t handle, time_t *time)
 {
-	if (handle != nyxDev) {
+	if (handle != nyxDev)
+	{
 		return NYX_ERROR_INVALID_HANDLE;
 	}
 
-	if (rtc_open() == 0) {
+	if (rtc_open() == 0)
+	{
 		return NYX_ERROR_INVALID_OPERATION;
 	}
 
-	if (rtc_read_alarm_time(time) < 0) {
+	if (rtc_read_alarm_time(time) < 0)
+	{
 		return NYX_ERROR_INVALID_OPERATION;
 	}
 
@@ -146,15 +166,18 @@ nyx_error_t system_query_next_alarm(nyx_device_handle_t handle, time_t *time)
 
 nyx_error_t system_query_rtc_time(nyx_device_handle_t handle, time_t *time)
 {
-	if (handle != nyxDev) {
+	if (handle != nyxDev)
+	{
 		return NYX_ERROR_INVALID_HANDLE;
 	}
 
-	if (rtc_open() == 0) {
+	if (rtc_open() == 0)
+	{
 		return NYX_ERROR_INVALID_OPERATION;
 	}
 
-	if (rtc_time(time) < 0) {
+	if (rtc_time(time) < 0)
+	{
 		return NYX_ERROR_INVALID_OPERATION;
 	}
 
@@ -164,35 +187,46 @@ nyx_error_t system_query_rtc_time(nyx_device_handle_t handle, time_t *time)
 
 nyx_error_t system_suspend(nyx_device_handle_t handle, bool *success)
 {
-	if (handle != nyxDev) {
+	if (handle != nyxDev)
+	{
 		return NYX_ERROR_INVALID_HANDLE;
 	}
 
 	int32_t ret = access("/usr/sbin/suspend_action", R_OK | X_OK);
-	if (ret || (success == NULL)) {
+
+	if (ret || (success == NULL))
+	{
 		/* dummy sleep function */
 		sleep(5);
 	}
-	else {
+	else
+	{
 		system("/usr/sbin/suspend_action");
 	}
-	if (success) {
+
+	if (success)
+	{
 		*success = true;
 	}
+
 	return NYX_ERROR_NONE;
 }
 
 
-nyx_error_t system_shutdown(nyx_device_handle_t handle , nyx_system_shutdown_type_t type, const char *reason)
+nyx_error_t system_shutdown(nyx_device_handle_t handle ,
+                            nyx_system_shutdown_type_t type, const char *reason)
 {
-	if (handle != nyxDev) {
+	if (handle != nyxDev)
+	{
 		return NYX_ERROR_INVALID_HANDLE;
 	}
 
-	switch (type) {
+	switch (type)
+	{
 		case NYX_SYSTEM_EMERG_SHUTDOWN:
 			system("halt -f");
 			break;
+
 		case NYX_SYSTEM_NORMAL_SHUTDOWN:
 		case NYX_SYSTEM_TEST_SHUTDOWN:
 		default:
@@ -204,16 +238,20 @@ nyx_error_t system_shutdown(nyx_device_handle_t handle , nyx_system_shutdown_typ
 }
 
 
-nyx_error_t system_reboot(nyx_device_handle_t handle , nyx_system_shutdown_type_t type, const char *reason)
+nyx_error_t system_reboot(nyx_device_handle_t handle ,
+                          nyx_system_shutdown_type_t type, const char *reason)
 {
-	if (handle != nyxDev) {
+	if (handle != nyxDev)
+	{
 		return NYX_ERROR_INVALID_HANDLE;
 	}
 
-	switch (type) {
+	switch (type)
+	{
 		case NYX_SYSTEM_EMERG_SHUTDOWN:
 			system("reboot -f");
 			break;
+
 		case NYX_SYSTEM_NORMAL_SHUTDOWN:
 		case NYX_SYSTEM_TEST_SHUTDOWN:
 		default:
@@ -225,7 +263,8 @@ nyx_error_t system_reboot(nyx_device_handle_t handle , nyx_system_shutdown_type_
 }
 
 
-nyx_error_t system_erase_partition(nyx_device_handle_t handle, nyx_system_erase_type_t type, const char* error_msg)
-{	
+nyx_error_t system_erase_partition(nyx_device_handle_t handle,
+                                   nyx_system_erase_type_t type, const char *error_msg)
+{
 	return NYX_ERROR_NOT_IMPLEMENTED;
 }

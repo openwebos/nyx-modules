@@ -23,12 +23,14 @@
 #include <openssl/err.h>
 #include <openssl/obj_mac.h>
 
-static const struct aes_algo_data_t {
+static const struct aes_algo_data_t
+{
 	const char *name;
 	int keylen;
 	nyx_security_aes_block_mode_t mode;
 	const EVP_CIPHER *(*cipher_fun)(void);
-} aes_algo_data[] = {
+} aes_algo_data[] =
+{
 	{ SN_aes_128_cbc, 128, NYX_SECURITY_AES_CBC, EVP_aes_128_cbc },
 	{ SN_aes_256_cbc, 256, NYX_SECURITY_AES_CBC, EVP_aes_256_cbc }
 };
@@ -36,39 +38,52 @@ static const struct aes_algo_data_t {
 static int aes_supported_keylength(int keylen)
 {
 	int i;
-	for (i = 0; i < sizeof(aes_algo_data)/sizeof(aes_algo_data[0]); ++i) {
-		if (aes_algo_data[i].keylen == keylen) {
+
+	for (i = 0; i < sizeof(aes_algo_data) / sizeof(aes_algo_data[0]); ++i)
+	{
+		if (aes_algo_data[i].keylen == keylen)
+		{
 			return 1;
 		}
 	}
+
 	return 0;
 }
 
-static const struct aes_algo_data_t * aes_algo_data_lookup(int keylen, nyx_security_aes_block_mode_t mode)
+static const struct aes_algo_data_t *aes_algo_data_lookup(int keylen,
+        nyx_security_aes_block_mode_t mode)
 {
 	int i;
-	for (i = 0; i < sizeof(aes_algo_data)/sizeof(aes_algo_data[0]); ++i) {
-		if (aes_algo_data[i].keylen == keylen && aes_algo_data[i].mode == mode) {
+
+	for (i = 0; i < sizeof(aes_algo_data) / sizeof(aes_algo_data[0]); ++i)
+	{
+		if (aes_algo_data[i].keylen == keylen && aes_algo_data[i].mode == mode)
+		{
 			return &aes_algo_data[i];
 		}
 	}
+
 	return NULL;
 }
 
 nyx_error_t aes_generate_key(int keylen, int *index)
 {
-	if (!aes_supported_keylength(keylen)) {
+	if (!aes_supported_keylength(keylen))
+	{
 		return NYX_ERROR_INVALID_VALUE;
 	}
 
 	struct aes_key_t *aes_key = g_malloc(sizeof(struct aes_key_t));
-	if (aes_key == NULL) {
+
+	if (aes_key == NULL)
+	{
 		return NYX_ERROR_OUT_OF_MEMORY;
 	}
 
 	aes_key->keylen = keylen;
 
-	if (!RAND_bytes(aes_key->key, aes_key->keylen / 8)) {
+	if (!RAND_bytes(aes_key->key, aes_key->keylen / 8))
+	{
 		goto error;
 	}
 
@@ -81,35 +96,47 @@ error:
 	return NYX_ERROR_GENERIC;
 }
 
-nyx_error_t aes_crypt(int index, int encrypt, nyx_security_aes_block_mode_t mode, const char *src, int srclen, char *dest, int *destlen, int *ivlen)
+nyx_error_t aes_crypt(int index, int encrypt,
+                      nyx_security_aes_block_mode_t mode, const char *src, int srclen, char *dest,
+                      int *destlen, int *ivlen)
 {
-	struct aes_key_t *aes_key = (struct aes_key_t *) keystore_key_lookup(keystore.aes, index);
-	if (aes_key == NULL) {
+	struct aes_key_t *aes_key = (struct aes_key_t *) keystore_key_lookup(
+	                                keystore.aes, index);
+
+	if (aes_key == NULL)
+	{
 		nyx_debug("%s: invalid key", __FUNCTION__);
 		return NYX_ERROR_INVALID_VALUE;
 	}
 
-	const struct aes_algo_data_t *algo = aes_algo_data_lookup(aes_key->keylen, mode);
-	if (algo == NULL) {
+	const struct aes_algo_data_t *algo = aes_algo_data_lookup(aes_key->keylen,
+	                                     mode);
+
+	if (algo == NULL)
+	{
 		return NYX_ERROR_INVALID_VALUE;
 	}
 
 	nyx_error_t result = NYX_ERROR_NONE;
 
 	/* IV saved at beginning of encryption buffer */
-	unsigned char *iv = encrypt ? (unsigned char*)dest : (unsigned char*)src;
+	unsigned char *iv = encrypt ? (unsigned char *)dest : (unsigned char *)src;
 
-	if (encrypt) {
+	if (encrypt)
+	{
 		*ivlen = AES_BLOCK_SIZE;
 
 		/* skip IV */
 		dest += AES_BLOCK_SIZE;
 
 		/* generate IV */
-		if (!RAND_bytes(iv, AES_BLOCK_SIZE)) {
+		if (!RAND_bytes(iv, AES_BLOCK_SIZE))
+		{
 			return NYX_ERROR_GENERIC;
 		}
-	} else {
+	}
+	else
+	{
 		g_assert(AES_BLOCK_SIZE == *ivlen);
 
 		/* skip IV */
@@ -123,7 +150,9 @@ nyx_error_t aes_crypt(int index, int encrypt, nyx_security_aes_block_mode_t mode
 	EVP_CIPHER_CTX_set_key_length(&ctx, aes_key->keylen);
 	EVP_CipherInit_ex(&ctx, NULL, NULL, aes_key->key, iv, encrypt);
 
-	if (!EVP_CipherUpdate(&ctx, (unsigned char*)dest, destlen, (unsigned char*)src, srclen)) {
+	if (!EVP_CipherUpdate(&ctx, (unsigned char *)dest, destlen,
+	                      (unsigned char *)src, srclen))
+	{
 		nyx_debug("EVP_CipherUpdate failed");
 		ERR_print_errors_fp(stderr);
 		result = NYX_ERROR_GENERIC;
@@ -131,15 +160,19 @@ nyx_error_t aes_crypt(int index, int encrypt, nyx_security_aes_block_mode_t mode
 	}
 
 	int tmplen;
-	if (!EVP_CipherFinal_ex(&ctx, (unsigned char*)dest + *destlen, &tmplen)) {
+
+	if (!EVP_CipherFinal_ex(&ctx, (unsigned char *)dest + *destlen, &tmplen))
+	{
 		nyx_debug("EVP_CipherFinal_ex failed");
 		ERR_print_errors_fp(stderr);
 		result = NYX_ERROR_GENERIC;
 		goto out;
 	}
+
 	*destlen += tmplen;
 
-	if (encrypt) {
+	if (encrypt)
+	{
 		*destlen += *ivlen;
 	}
 

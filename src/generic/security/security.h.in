@@ -58,10 +58,13 @@ void keystore_save(struct keystore_t *keystore);
 void keystore_dump(struct keystore_t *keystore);
 
 nyx_error_t aes_generate_key(int keylen, int *index);
-nyx_error_t aes_crypt(int index, int encrypt, nyx_security_aes_block_mode_t mode, const char *src, int srclen, char *dest, int *destlen, int *ivlen);
+nyx_error_t aes_crypt(int index, int encrypt,
+                      nyx_security_aes_block_mode_t mode, const char *src, int srclen, char *dest,
+                      int *destlen, int *ivlen);
 
 nyx_error_t rsa_generate_key(int keylen, int *key_index);
-nyx_error_t rsa_crypt(int key_index, int encrypt, const char *src, int srclen, char *dest, int *destlen);
+nyx_error_t rsa_crypt(int key_index, int encrypt, const char *src, int srclen,
+                      char *dest, int *destlen);
 
 nyx_error_t sha_init(const char *name);
 nyx_error_t sha_update(const char *src, int srclen);

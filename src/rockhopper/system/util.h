@@ -80,7 +80,7 @@ void reset_lifetime_timer();
  * @param dirPath        fully-qualified path describing directory to search
  *                       for files.
  */
-void log_blame(const char* dirPath);
+void log_blame(const char *dirPath);
 
 
 #endif

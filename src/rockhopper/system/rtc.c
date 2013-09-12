@@ -41,9 +41,9 @@
 #include "rtc.h"
 
 #ifdef BUILD_FOR_DESKTOP
-	#define DEV_RTC_IMPLEMENTED 0
+#define DEV_RTC_IMPLEMENTED 0
 #else
-	#define DEV_RTC_IMPLEMENTED 1
+#define DEV_RTC_IMPLEMENTED 1
 #endif
 
 /**
@@ -53,7 +53,7 @@
 
 int32_t rtc_fd = -1;
 
-#define STD_ASCTIME_BUF_SIZE	26
+#define STD_ASCTIME_BUF_SIZE    26
 
 #if DEV_RTC_IMPLEMENTED
 
@@ -62,7 +62,7 @@ int32_t rtc_fd = -1;
 */
 
 static void
-	rtc_time_to_tm(struct rtc_time *rtc_time, struct tm *tm_time)
+rtc_time_to_tm(struct rtc_time *rtc_time, struct tm *tm_time)
 {
 	g_return_if_fail(rtc_time && tm_time);
 
@@ -73,7 +73,7 @@ static void
 	tm_time->tm_hour = rtc_time->tm_hour;
 	tm_time->tm_min  = rtc_time->tm_min;
 	tm_time->tm_sec  = rtc_time->tm_sec;
-	tm_time->tm_isdst = -1;	/* not known */
+	tm_time->tm_isdst = -1; /* not known */
 }
 #endif
 
@@ -82,7 +82,7 @@ static void
 */
 
 static void
-	tm_to_rtc_time(struct tm *tm_time, struct rtc_time *rtc_time)
+tm_to_rtc_time(struct tm *tm_time, struct rtc_time *rtc_time)
 {
 	g_return_if_fail(tm_time && rtc_time);
 
@@ -101,7 +101,7 @@ static void
 */
 
 static void
-	tm_to_rtc_wkalrm (struct tm *tm_time, struct rtc_wkalrm * alarm)
+tm_to_rtc_wkalrm(struct tm *tm_time, struct rtc_wkalrm *alarm)
 {
 	g_return_if_fail(tm_time && alarm);
 	tm_to_rtc_time(tm_time, &alarm->time);
@@ -114,21 +114,30 @@ static void
  *
  */
 bool
-	rtc_open()
+rtc_open()
 {
 #if DEV_RTC_IMPLEMENTED
-	if (rtc_fd >= 0) return true;
+
+	if (rtc_fd >= 0)
+	{
+		return true;
+	}
 
 	rtc_fd = open("/dev/rtc", O_RDONLY);
-	if (rtc_fd < 0) {
+
+	if (rtc_fd < 0)
+	{
 		int32_t err1 = errno;
 		rtc_fd = open("/dev/rtc0", O_RDONLY);
-		if (rtc_fd < 0) {
+
+		if (rtc_fd < 0)
+		{
 			g_critical("Could not open rtc driver. %d %d", err1, errno);
 			//BUG();
 			return false;
 		}
 	}
+
 	return true;
 #else
 	g_debug("Powerd RTC code disabled");
@@ -143,11 +152,12 @@ bool
 */
 
 static gboolean
-	rtc_event(GIOChannel *source, GIOCondition condition, gpointer ctx)
+rtc_event(GIOChannel *source, GIOCondition condition, gpointer ctx)
 {
 	RtcAlarmFunc func = (RtcAlarmFunc)ctx;
 
-	if (rtc_check_alarm()) {
+	if (rtc_check_alarm())
+	{
 		func();
 	}
 
@@ -163,15 +173,17 @@ static gboolean
 static GIOChannel *rtc_channel = NULL;
 
 bool
-	rtc_add_watch(RtcAlarmFunc func)
+rtc_add_watch(RtcAlarmFunc func)
 {
 #if DEV_RTC_IMPLEMENTED
-	if(rtc_channel == NULL)
+
+	if (rtc_channel == NULL)
 	{
 		rtc_channel = g_io_channel_unix_new(rtc_fd);
 		g_io_add_watch(rtc_channel, G_IO_IN, rtc_event, func);
 		g_io_channel_unref(rtc_channel);
 	}
+
 	return true;
 #else
 	return false;
@@ -179,15 +191,17 @@ bool
 }
 
 bool
-	rtc_clear_watch(void)
+rtc_clear_watch(void)
 {
 #if DEV_RTC_IMPLEMENTED
-	if(rtc_channel) 
+
+	if (rtc_channel)
 	{
-		g_io_channel_shutdown(rtc_channel,true,NULL);
-		rtc_channel=NULL;
+		g_io_channel_shutdown(rtc_channel, true, NULL);
+		rtc_channel = NULL;
 		rtc_close();
 	}
+
 	return true;
 #else
 	return false;
@@ -198,9 +212,10 @@ bool
 * @brief Close rtc device.
 */
 void
-	rtc_close()
+rtc_close()
 {
-	if (rtc_fd >= 0) {
+	if (rtc_fd >= 0)
+	{
 		close(rtc_fd);
 		rtc_fd = -1;
 	}
@@ -210,7 +225,7 @@ void
 * @brief Obtain an fd for use in poll() or select().
 */
 int32_t
-	rtc_getfd()
+rtc_getfd()
 {
 	return rtc_fd;
 }
@@ -220,14 +235,21 @@ int32_t
 */
 
 bool
-	rtc_read(struct tm *tm_time)
+rtc_read(struct tm *tm_time)
 {
 #if DEV_RTC_IMPLEMENTED
-	if (!tm_time) return false;
+
+	if (!tm_time)
+	{
+		return false;
+	}
 
 	struct rtc_time rtc_time;
+
 	int32_t ret = ioctl(rtc_fd, RTC_RD_TIME, &rtc_time);
-	if (ret < 0) {
+
+	if (ret < 0)
+	{
 		g_critical("RTC_RD_TIME ioctl %d", errno);
 		//      BUG();
 		return false;
@@ -249,17 +271,23 @@ time_t rtc_time(time_t *time)
 {
 	struct tm tm;
 	time_t t;
-	if (!rtc_read(&tm)) {
+
+	if (!rtc_read(&tm))
+	{
 #if DEV_RTC_IMPLEMENTED
 		g_warning("%s: warning could not read time.\n", __FUNCTION__);
 		//     BUG();
 #endif
 		return -1;
 	}
+
 	t = timegm(&tm);
-	if (time) {
+
+	if (time)
+	{
 		*time = t;
 	}
+
 	return t;
 }
 
@@ -276,22 +304,26 @@ i*/
 
 
 bool
-	rtc_set_alarm_time(time_t expiry)
+rtc_set_alarm_time(time_t expiry)
 {
 	time_t now = 0;
 	struct tm tm_time;
 	struct rtc_wkalrm alarm;
 	static time_t curr_expiry = 0;
 
-	if(expiry == curr_expiry) {
+	if (expiry == curr_expiry)
+	{
 		return true;
 	}
-	else 
+	else
+	{
 		curr_expiry = expiry;
+	}
 
 	rtc_time(&now);
 
-	if (expiry < now + 2) {
+	if (expiry < now + 2)
+	{
 		g_debug("%s: expiry = now + 2", __FUNCTION__);
 		expiry = now + 2;
 	}
@@ -309,20 +341,29 @@ bool
 
 
 bool
-	rtc_set_alarm(struct rtc_wkalrm *alarm)
+rtc_set_alarm(struct rtc_wkalrm *alarm)
 {
 #if DEV_RTC_IMPLEMENTED
-	if (!alarm) {
+
+	if (!alarm)
+	{
 		return false;
 	}
+
 	int32_t ret = ioctl(rtc_fd, RTC_WKALM_SET, alarm);
-	if (ret < 0) {
+
+	if (ret < 0)
+	{
 		g_critical("Could not set RTC_WKALM_SET %d", errno);
-		if (errno == ENOTTY) {
+
+		if (errno == ENOTTY)
+		{
 			g_critical("Alarm IRQs not supported.");
 		}
+
 		return false;
 	}
+
 	return true;
 #else
 	return false;
@@ -334,19 +375,23 @@ bool
 */
 
 bool
-	rtc_read_alarm(struct rtc_wkalrm *alarm)
+rtc_read_alarm(struct rtc_wkalrm *alarm)
 {
 #if DEV_RTC_IMPLEMENTED
-	if (!alarm) {
+
+	if (!alarm)
+	{
 		return false;
 	}
 
 	int32_t ret = ioctl(rtc_fd, RTC_WKALM_RD, alarm);
-	if (ret < 0) {
+
+	if (ret < 0)
+	{
 		g_critical("RTC_WKALM_RD ioctl %d", errno);
 
 		alarm->enabled = false;
-//        BUG();
+		//        BUG();
 		return false;
 	}
 
@@ -362,12 +407,13 @@ bool
 */
 
 bool
-	rtc_read_alarm_time(time_t *time)
+rtc_read_alarm_time(time_t *time)
 {
 	struct rtc_wkalrm alarm;
 	struct tm alarm_tm;
 
-	if (!rtc_read_alarm(&alarm)) {
+	if (!rtc_read_alarm(&alarm))
+	{
 		return false;
 	}
 
@@ -383,7 +429,7 @@ bool
 */
 
 bool
-	rtc_clear_alarm(void)
+rtc_clear_alarm(void)
 {
 #if DEV_RTC_IMPLEMENTED
 	int32_t ret;
@@ -391,12 +437,15 @@ bool
 
 	rtc_read_alarm(&alarm);
 
-	if (alarm.enabled) {
+	if (alarm.enabled)
+	{
 		g_debug("%s: clearing...", __FUNCTION__);
 
 		alarm.enabled = false;
 		ret = ioctl(rtc_fd, RTC_WKALM_SET, &alarm);
-		if (ret < 0) {
+
+		if (ret < 0)
+		{
 			g_critical("Could not clear alarm %d", errno);
 
 			/*
@@ -414,7 +463,9 @@ bool
 			alarm.time.tm_isdst = 0;
 
 			ret = ioctl(rtc_fd, RTC_WKALM_SET, &alarm);
-			if (ret < 0) {
+
+			if (ret < 0)
+			{
 				g_critical("Could not clear alarm after explicit reset: %d", errno);
 				goto error;
 			}
@@ -435,23 +486,28 @@ error:
 * @retval
 */
 bool
-	rtc_check_alarm()
+rtc_check_alarm()
 {
 #if DEV_RTC_IMPLEMENTED
 	unsigned long data;
 	int32_t ret;
 
 	ret = read(rtc_fd, &data, sizeof(unsigned long));
-	if (ret < 0) {
+
+	if (ret < 0)
+	{
 		return false;
 	}
-	else if (data & RTC_AF) {
+	else if (data & RTC_AF)
+	{
 		rtc_clear_alarm();
 		return true;
 	}
-	else {
+	else
+	{
 		return false;
 	}
+
 #else
 	return false;
 #endif

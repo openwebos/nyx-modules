@@ -22,8 +22,8 @@
 
 #ifndef _BATTERY_READ_H_
 #define _BATTERY_READ_H_
-#define BATT_CHALLENGE_MAX_LEN		16
-#define BATT_RESPONSE_MAX_LEN		40
+#define BATT_CHALLENGE_MAX_LEN      16
+#define BATT_RESPONSE_MAX_LEN       40
 
 int battery_percent(void);
 int battery_temperature(void);
@@ -35,7 +35,8 @@ double battery_rawcoulomb(void);
 double battery_coulomb(void);
 double battery_age(void);
 bool battery_is_present(void);
-bool battery_is_authenticated(const char *pair_challenge, const char *pair_response);
+bool battery_is_authenticated(const char *pair_challenge,
+                              const char *pair_response);
 void battery_read_init(void);
 
 #endif /* _BATTERY_READ_H_ */
