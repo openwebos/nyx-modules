@@ -290,9 +290,8 @@ nyx_error_t os_info_query(nyx_device_handle_t d, nyx_os_info_query_t query,
 			*dest = "@DISTRO_VERSION@";
 			break;
 
-		case NYX_OS_INFO_WEBOS_PRERELEASE:       // change this after proper
-			// variable is defined
-			*dest = "devel";
+		case NYX_OS_INFO_WEBOS_PRERELEASE:
+			*dest = "@WEBOS_DISTRO_PRERELEASE@";
 			break;
 
 		case NYX_OS_INFO_MANUFACTURING_VERSION:
