@@ -264,7 +264,7 @@ nyx_error_t system_reboot(nyx_device_handle_t handle ,
 
 
 nyx_error_t system_erase_partition(nyx_device_handle_t handle,
-                                   nyx_system_erase_type_t type, const char *error_msg)
+                                   nyx_system_erase_type_t type)
 {
 	return NYX_ERROR_NOT_IMPLEMENTED;
 }
