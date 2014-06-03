@@ -1,6 +1,6 @@
 /* @@@LICENSE
 *
-*      Copyright (c) 2013 LG Electronics, Inc.
+*      Copyright (c) 2013-2014 LG Electronics, Inc.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -294,7 +294,7 @@ nyx_error_t os_info_query(nyx_device_handle_t d, nyx_os_info_query_t query,
 			*dest = "@WEBOS_DISTRO_PRERELEASE@";
 			break;
 
-		case NYX_OS_INFO_MANUFACTURING_VERSION:
+		case NYX_OS_INFO_WEBOS_MANUFACTURING_VERSION:
 			*dest = "@WEBOS_DISTRO_MANUFACTURING_VERSION@";
 			break;
 
@@ -330,6 +330,17 @@ nyx_error_t os_info_query(nyx_device_handle_t d, nyx_os_info_query_t query,
 				*dest = os_info->core_os_release_codename;
 			}
 
+			break;
+
+		case NYX_OS_INFO_ENCRYPTION_KEY_TYPE:
+			if (sizeof("@ENCRYPTION_KEY_TYPE@") == 1)
+			{
+				error = NYX_ERROR_NOT_IMPLEMENTED;
+			}
+			else
+			{
+				*dest = "@ENCRYPTION_KEY_TYPE@";
+			}
 			break;
 
 		default:
