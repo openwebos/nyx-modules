@@ -1,6 +1,6 @@
 # @@@LICENSE
 #
-#      Copyright (c) 2010-2013 LG Electronics, Inc.
+#      Copyright (c) 2010-2014 LG Electronics, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,6 +28,8 @@ set(MODULE_GENERIC_OS_INFO        YES CACHE BOOL "Include generic 'OSInfo' modul
 set(MODULE_GENERIC_DEVICE_INFO    YES CACHE BOOL "Include generic 'DeviceInfo' module")
 set(MODULE_GENERIC_SECURITY       YES CACHE BOOL "Include generic 'Security' module")
 set(MODULE_GENERIC_DISPLAY        YES CACHE BOOL "Include generic 'Display' module")
+
+set(ENCRYPTION_KEY_TYPE           "" CACHE STRING "Encryption key type")
 
 include(FindPkgConfig)
 
