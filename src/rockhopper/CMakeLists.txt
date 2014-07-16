@@ -19,7 +19,13 @@
 
 if(MODULE_SYSTEM_WEBOS_LINUX)
     add_subdirectory(system)
+endif()
+
+if(MODULE_BATTERY_WEBOS_LINUX)
     add_subdirectory(battery)
+endif()
+
+if(MODULE_CHARGER_WEBOS_LINUX)
     add_subdirectory(charger)
 endif()
 
