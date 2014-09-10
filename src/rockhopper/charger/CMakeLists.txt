@@ -1,6 +1,6 @@
 # @@@LICENSE
 #
-#      Copyright (c) 2010-2013 LG Electronics, Inc.
+#      Copyright (c) 2010-2014 LG Electronics, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,5 +16,11 @@
 #
 # LICENSE@@@
 
-nyx_create_module(ChargerMain emulator/chargerlib.c)
+include_directories(../utils)
+
+if(${WEBOS_TARGET_MACHINE_IMPL} STREQUAL emulator)
+    nyx_create_module(ChargerMain chargerlib.c emulator/charger.c)
+else()
+    nyx_create_module(ChargerMain ../utils/utils.c chargerlib.c device/charger.c)
+endif()
 

@@ -1,6 +1,6 @@
 # @@@LICENSE
 #
-#      Copyright (c) 2010-2013 LG Electronics, Inc.
+#      Copyright (c) 2010-2014 LG Electronics, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,7 +17,11 @@
 # LICENSE@@@
 
 include_directories(.)
+include_directories(../utils)
 
-nyx_create_module(BatteryMain batterylib.c emulator/fake_battery.c)
-install(FILES emulator/fake_battery_values.sh DESTINATION "/usr/sbin")
-
+if(${WEBOS_TARGET_MACHINE_IMPL} STREQUAL emulator)
+    nyx_create_module(BatteryMain ../utils/utils.c batterylib.c emulator/fake_battery.c)
+    install(FILES emulator/fake_battery_values.sh DESTINATION "/usr/sbin")
+else()
+    nyx_create_module(BatteryMain ../utils/utils.c batterylib.c device/battery.c)
+endif()
