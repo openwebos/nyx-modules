@@ -22,7 +22,7 @@ project(nyx-modules)
 
 include(webOS/webOS)
 webos_modules_init(1 0 0 QUALIFIER RC7)
-webos_component(6 1 0)
+webos_component(6 2 0)
 
 add_subdirectory(src)
 
