@@ -79,9 +79,7 @@ nyx_error_t nyx_module_open(nyx_instance_t i, nyx_device_t **d)
 	                           "battery_set_wakeup_percentage");
 
 	*d = (nyx_device_t *)nyxDev;
-	battery_read_init();
-
-	return NYX_ERROR_NONE;
+	return battery_read_init();
 }
 
 nyx_error_t nyx_module_close(nyx_device_t *d)

@@ -1,6 +1,6 @@
 /* @@@LICENSE
 *
-*      Copyright (c) 2010-2013 LG Electronics, Inc.
+*      Copyright (c) 2014 LG Electronics, Inc.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -16,19 +16,13 @@
 *
 * LICENSE@@@ */
 
-/**
- * @file batterylib.h
- */
+#ifndef CHARGER_H_
+#define CHARGER_H_
 
-#ifndef BATTERYLIB_H_
-#define BATTERYLIB_H_
+nyx_error_t _charger_init(void);
+nyx_error_t _charger_read_status(nyx_charger_status_t *status);
+nyx_error_t _charger_enable_charging(nyx_charger_status_t *status);
+nyx_error_t _charger_disable_charging(nyx_charger_status_t *status);
+nyx_error_t _charger_query_charger_event(nyx_charger_event_t *event);
 
-#include <nyx/nyx_module.h>
-#include <nyx/module/nyx_utils.h>
-
-int battery_init(void);
-bool battery_authenticate(void);
-void battery_set_wakeup_percent(int);
-void battery_read_status(nyx_battery_status_t *);
-
-#endif // BATTERYLIB_H_
+#endif

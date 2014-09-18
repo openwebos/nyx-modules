@@ -1,6 +1,6 @@
 /* @@@LICENSE
 *
-*      Copyright (c) 2010-2013 LG Electronics, Inc.
+*      Copyright (c) 2014 LG Electronics, Inc.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -17,18 +17,14 @@
 * LICENSE@@@ */
 
 /**
- * @file batterylib.h
+ * @file utils.h
  */
 
-#ifndef BATTERYLIB_H_
-#define BATTERYLIB_H_
+#ifndef UTILS_H_
+#define UTILS_H_
 
-#include <nyx/nyx_module.h>
-#include <nyx/module/nyx_utils.h>
+int FileGetString(const char *path, char *ret_string, size_t maxlen);
+int FileGetDouble(const char *path, double *ret_data);
+char* find_power_supply_sysfs_path(const char *device_type);
 
-int battery_init(void);
-bool battery_authenticate(void);
-void battery_set_wakeup_percent(int);
-void battery_read_status(nyx_battery_status_t *);
-
-#endif // BATTERYLIB_H_
+#endif // UTILS_H_
